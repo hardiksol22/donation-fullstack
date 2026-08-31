@@ -3,6 +3,7 @@
 import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../../../lib/api';
+import { toast } from "sonner"; // <-- Sonner Toast Import
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,12 +38,11 @@ export default function DonateItemsPage() {
   useEffect(() => {
     const fetchNGOs = async () => {
       try {
-        // Updated API route to match standard REST patterns (adjust if your backend differs)
         const response = await api.get('/api/ngos'); 
         setNgos(response.data.data || response.data);
       } catch (err) {
         console.error('Failed to load NGOs', err);
-        // Silently fail here so the form still works even if NGOs can't be loaded initially
+        // Silently fail here so the form still works
       }
     };
     fetchNGOs();
@@ -73,10 +73,16 @@ export default function DonateItemsPage() {
 
       await api.post('/api/donations', payload);
       
-      alert('Your donation request has been scheduled successfully! ✨');
+      // Premium Success Notification 
+      toast.success('Donation request scheduled successfully! ✨');
+      
       router.push('/donor/history');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to schedule donation.');
+      const errorMessage = err.response?.data?.message || 'Failed to schedule donation.';
+      setError(errorMessage);
+      
+      // Premium Error Notification
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -101,6 +107,7 @@ export default function DonateItemsPage() {
         </CardHeader>
         
         <CardContent>
+          {/* We keep the inline error as a fallback, but toast will also show */}
           {error && (
             <div className="p-3 mb-6 text-sm text-red-500 bg-red-100/10 border border-red-500/20 rounded-md">
               {error}

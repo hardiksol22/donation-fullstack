@@ -1,35 +1,43 @@
-const axios = require('axios');
+// utils/geocode.js
 
 /**
- * Converts a raw address string into latitude and longitude coordinates.
- * Note: Requires a Google Maps API Key or similar service in your .env file.
+ * Converts a text address into Latitude and Longitude using OpenStreetMap API (Free)
+ * @param {string} address - The pickup address provided by the donor
+ * @returns {Object} - An object containing { lat, lng }
  */
 const geocodeAddress = async (address) => {
   try {
-    // Example using Google Maps Geocoding API
-    const apiKey = process.env.MAPS_API_KEY;
+    const encodedAddress = encodeURIComponent(address);
     
-    if (!apiKey) {
-      console.warn('Maps API Key is missing. Skipping geocoding.');
-      return { lat: null, lng: null };
-    }
-
-    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-      params: {
-        address: address,
-        key: apiKey,
-      },
+    // OpenStreetMap Nominatim API strictly requires a User-Agent header
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=1`, {
+      headers: {
+        'User-Agent': 'DaanSetu-DonationPlatform/1.0'
+      }
     });
 
-    if (response.data.results.length > 0) {
-      const location = response.data.results[0].geometry.location;
-      return { lat: location.lat, lng: location.lng };
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon)
+      };
     } else {
-      return { lat: null, lng: null };
+      // Agar address thik se map par nahi mila, toh default location return karein
+      console.warn(`Address not found: ${address}. Using default Vadodara coordinates.`);
+      return {
+        lat: 22.3072, // Vadodara Latitude 
+        lng: 73.1812  // Vadodara Longitude
+      };
     }
   } catch (error) {
-    console.error('Geocoding error:', error.message);
-    return { lat: null, lng: null };
+    console.error('Geocoding API Error:', error.message);
+    // Error aane par server crash na ho, isliye default fallback coordinates return karte hain
+    return {
+      lat: 22.3072,
+      lng: 73.1812
+    };
   }
 };
 

@@ -1,120 +1,277 @@
 "use client"
 
-import { useState, FormEvent } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import api from "../../lib/api"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
+import api from "@/lib/api"
+import { toast } from "sonner" // Premium Notifications
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CheckCircle2, Clock, MapPin, XCircle, Loader2, Search, Package, TrendingUp, AlertCircle } from "lucide-react"
 
-export default function RegisterPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+interface DonationRequest {
+  _id: string;
+  category: string;
+  quantity: number;
+  condition: string;
+  pickupAddress: string;
+  status: string;
+  createdAt: string;
+}
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "Donor", // Updated to match schema
-    organizationName: "",
-    contactNumber: "",
-  })
+export default function AdvancedNGODashboard() {
+  const [activeTab, setActiveTab] = useState("pending")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [requests, setRequests] = useState<DonationRequest[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleRoleChange = (value: string) => {
-    setFormData({ ...formData, role: value })
-  }
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
+  // Fetch real data
+  const fetchRequests = async () => {
     try {
-      await api.post("/api/auth/register", formData)
-      alert("Account created successfully! ✨ Please login.")
-      router.push("/login")
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed. Try again.")
+      setLoading(true)
+      const response = await api.get('/api/donations') 
+      setRequests(response.data.data || response.data)
+    } catch (error) {
+      console.error("Failed to fetch donation requests", error)
+      toast.error("Failed to load live data.")
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    fetchRequests()
+  }, [])
+
+  // Status Update Handler (Fixed Route & Added Toast)
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    try {
+      // Corrected route path matching your backend setup
+      await api.patch(`/api/donations/${id}/status`, { status: newStatus })
+      
+      setRequests(prev => prev.map(req => 
+        req._id === id ? { ...req, status: newStatus } : req
+      ))
+      
+      toast.success(`Request successfully marked as ${newStatus} ✨`)
+    } catch (error) {
+      console.error(`Failed to update status to ${newStatus}`, error)
+      toast.error("Failed to update status. Please check your backend connection.")
+    }
+  }
+
+  // 1. Dynamic Analytics Calculations
+  const pendingCount = requests.filter(r => (r.status?.toLowerCase() || 'pending') === 'pending').length;
+  const acceptedCount = requests.filter(r => (r.status?.toLowerCase()) === 'accepted').length;
+  const totalItems = requests.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+
+  // 2. Advanced Multi-level Filtering (Tab + Search)
+  const filteredRequests = requests.filter(req => {
+    const status = req.status?.toLowerCase() || 'pending'
+    
+    // Tab Match
+    const matchesTab = 
+      activeTab === "all" || 
+      (activeTab === "pending" && status === "pending") || 
+      (activeTab === "accepted" && (status === "accepted" || status === "scheduled"))
+
+    // Search Query Match (By ID, Address, or Category)
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = 
+      req._id.toLowerCase().includes(searchLower) ||
+      req.pickupAddress.toLowerCase().includes(searchLower) ||
+      req.category.toLowerCase().includes(searchLower)
+
+    return matchesTab && matchesSearch
+  })
+
   return (
-    <div className="flex items-center justify-center min-h-[80vh] px-4 py-10">
-      <Card className="w-full max-w-md shadow-lg border-primary/10">
-        <CardHeader className="space-y-1 text-center pb-6">
-          <CardTitle className="text-3xl font-extrabold tracking-tight">Join DaanSetu</CardTitle>
-          <CardDescription>Create your account to start making an impact.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && <div className="p-3 mb-4 text-sm text-red-500 bg-red-100/10 border border-red-500/20 rounded-md">{error}</div>}
+    <div className="container mx-auto py-10 max-w-7xl px-4">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Command Center</h1>
+          <p className="text-muted-foreground mt-1">Advanced overview of all incoming operations and impact.</p>
+        </div>
+        <Button onClick={fetchRequests} variant="outline" className="h-10">
+          Refresh Data
+        </Button>
+      </div>
+
+      {/* Advanced Analytics Stat Cards */}
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <Card className="shadow-sm border-primary/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Pickups</CardTitle>
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-amber-500">{pendingCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Requires immediate attention</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm border-primary/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Successfully Accepted</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-600">{acceptedCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total requests processed</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-primary/10 bg-primary/5">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-primary">Total Items Impact</CardTitle>
+            <TrendingUp className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-primary">{totalItems}</div>
+            <p className="text-xs text-muted-foreground mt-1">Cumulative items collected</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Data Section */}
+      <Tabs defaultValue="pending" className="w-full" onValueChange={setActiveTab}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <TabsList className="h-11">
+            <TabsTrigger value="pending" className="text-md px-6">Pending ({pendingCount})</TabsTrigger>
+            <TabsTrigger value="accepted" className="text-md px-6">Accepted</TabsTrigger>
+            <TabsTrigger value="all" className="text-md px-6">All History</TabsTrigger>
+          </TabsList>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a...</Label>
-              <Select defaultValue="Donor" onValueChange={handleRoleChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Donor">Donor (I want to donate items)</SelectItem>
-                  <SelectItem value="NGO">NGO (I want to receive items)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" name="name" placeholder="John Doe" required onChange={handleChange} />
-            </div>
-
-            {/* Smart Fields: Only show if NGO is selected */}
-            {formData.role === "NGO" && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="space-y-2">
-                  <Label htmlFor="organizationName">Organization Name</Label>
-                  <Input id="organizationName" name="organizationName" placeholder="e.g. Helping Hands NGO" required onChange={handleChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactNumber">Contact Number</Label>
-                  <Input id="contactNumber" name="contactNumber" placeholder="+91 9876543210" required onChange={handleChange} />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="name@example.com" required onChange={handleChange} />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required onChange={handleChange} />
-            </div>
-            
-            <Button type="submit" className="w-full h-11 text-md font-semibold mt-4" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {loading ? "Creating Account..." : "Sign Up"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center text-sm text-muted-foreground pt-2 pb-6">
-          <div>
-            Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-primary hover:underline transition-colors">Sign in</Link>
+          {/* Advanced Search Bar */}
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search by ID, Address or Category..." 
+              className="pl-9 h-11"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        </CardFooter>
-      </Card>
+        </div>
+        
+        <TabsContent value={activeTab} className="mt-0">
+          <Card className="border-primary/10 shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="w-[100px] pl-6 text-xs uppercase tracking-wider">Ref ID</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider">Donation Details</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider">Condition</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider">Pickup Location</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="text-right pr-6 text-xs uppercase tracking-wider">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-64 text-center">
+                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                          <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
+                          <p className="font-medium">Syncing live data from servers...</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredRequests.length > 0 ? (
+                    filteredRequests.map((req) => (
+                      <TableRow key={req._id} className="transition-colors hover:bg-muted/30">
+                        <TableCell className="font-mono text-xs text-muted-foreground pl-6">
+                          {req._id.substring(0, 6).toUpperCase()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-secondary rounded-md hidden sm:block">
+                              <Package className="h-4 w-4 text-secondary-foreground" />
+                            </div>
+                            <div>
+                              <div className="font-bold">{req.category}</div>
+                              <div className="text-xs text-muted-foreground font-medium">Quantity: {req.quantity} Items</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="font-normal">{req.condition}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-sm font-medium max-w-[220px] truncate">
+                            <MapPin className="mr-1.5 h-3.5 w-3.5 text-muted-foreground shrink-0" /> 
+                            {req.pickupAddress}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={req.status?.toLowerCase() === "pending" ? "outline" : "default"} 
+                                 className={req.status?.toLowerCase() === "pending" 
+                                  ? "text-amber-600 border-amber-500/30 bg-amber-500/10" 
+                                  : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20"}>
+                            {req.status?.toLowerCase() === "pending" ? <Clock className="mr-1.5 h-3 w-3" /> : <CheckCircle2 className="mr-1.5 h-3 w-3" />}
+                            {req.status || 'Pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          {req.status?.toLowerCase() === "pending" ? (
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleUpdateStatus(req._id, 'Rejected')}
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                title="Reject Request"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleUpdateStatus(req._id, 'Accepted')}
+                                className="h-8 px-4 font-semibold shadow-sm transition-transform hover:scale-105"
+                              >
+                                Accept
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="ghost" className="h-8 font-medium">View Details</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center">
+                          <Package className="h-10 w-10 text-muted/50 mb-3" />
+                          <p className="font-medium text-lg">No requests found</p>
+                          <p className="text-sm">Try adjusting your search filters or check a different tab.</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

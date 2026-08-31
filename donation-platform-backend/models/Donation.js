@@ -1,3 +1,4 @@
+// models/Donation.js
 const mongoose = require('mongoose');
 
 const donationSchema = new mongoose.Schema({
@@ -9,26 +10,25 @@ const donationSchema = new mongoose.Schema({
   ngoId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 
-  }, // Remains null until an NGO accepts the request
+  }, // Optional: specific NGO ke liye
   category: { 
     type: String, 
-    enum: ['Clothes', 'Household Items', 'Books', 'Toys'], 
     required: true 
   },
   quantity: { 
     type: Number, 
-    required: true 
+    required: true,
+    min: 1 
   },
   condition: { 
     type: String, 
-    enum: ['New', 'Gently Used', 'Fair'], 
+    enum: ['New', 'Gently Used', 'Fair'],
     required: true 
   },
   pickupAddress: { 
     type: String, 
     required: true 
   },
-  // Added location field to store geocoded Maps coordinates
   location: {
     lat: { type: Number },
     lng: { type: Number }
@@ -39,7 +39,7 @@ const donationSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['Pending', 'Accepted', 'Collected', 'Cancelled'], 
+    enum: ['Pending', 'Accepted', 'Rejected', 'Scheduled', 'Collected'], 
     default: 'Pending' 
   }
 }, { timestamps: true });
