@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Clean configuration: Use environment variable in production, fallback to local URL for development
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   headers: {
     'Content-Type': 'application/json',
