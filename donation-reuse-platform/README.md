@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DaanSetu-Donation & Reuse Platform for Clothes and Household Items ♻️
 
-## Getting Started
+A full-stack, real-time web application designed to bridge the gap between individual donors and verified NGOs. This platform streamlines the process of giving gently used clothes, electronics, and household items a second life through a secure, gamified, and location-aware ecosystem.
 
-First, run the development server:
+## 🌟 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### For Donors 🎁
+*   **Seamless Item Listing:** Upload images (powered by Cloudinary) and details of items you wish to donate.
+*   **Smart Scheduling:** Set preferred pickup times and addresses.
+*   **Impact Dashboard:** Track your complete donation history and real-time pickup status.
+*   **Gamified Leaderboard:** A dynamic Hall of Fame ranking top contributors based on real-time MongoDB aggregation pipelines.
 
-Open [http://https://donation-fullstack.onrender.comost:3000](http://https://donation-fullstack.onrender.comost:3000) with your browser to see the result.
+### For NGO Partners 🤝
+*   **Command Center:** A dedicated dashboard to view and claim available local donations.
+*   **Status Management:** Update donation statuses (Requested, Accepted, Completed) to keep donors informed.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### For Super Admins 🛡️
+*   **Centralized Overview:** Real-time platform metrics (total users, active donations, completed pickups).
+*   **Strict Verification:** An approval queue to manually verify NGO credentials before granting platform access.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Security & Architecture 🔒
+*   **Role-Based Access Control (RBAC):** Strict JWT-based authentication ensuring isolated routing for Donors, NGOs, and Admins.
+*   **Client-Side Route Protection:** Custom React wrappers preventing unauthorized access to private dashboards.
+*   **Secure Password Hashing:** Implemented via bcryptjs.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 💻 Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Frontend (Client)**
+*   [Next.js 14](https://nextjs.org/) (App Router)
+*   React.js
+*   Tailwind CSS
+*   [Shadcn UI](https://ui.shadcn.com/) (Accessible components)
+*   Lucide React (Iconography)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Backend (Server)**
+*   Node.js & Express.js
+*   MongoDB (Mongoose ODM)
+*   JSON Web Tokens (JWT) for stateless authentication
+*   Bcrypt.js
 
-## Deploy on Vercel
+**External Services**
+*   **Cloudinary:** Image hosting and management.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ⚙️ Environment Variables
+
+To run this project locally, create `.env` files in both your frontend and backend directories.
+
+### Backend (`/backend/.env`)
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_super_secret_key
