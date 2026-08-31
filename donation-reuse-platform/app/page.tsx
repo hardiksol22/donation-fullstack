@@ -1,9 +1,26 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { HeartHandshake, ArrowRight, Recycle, MapPin } from "lucide-react"
 
 export default function LandingPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    // 1. Check local storage for existing session
+    const token = localStorage.getItem("token")
+    const role = localStorage.getItem("userRole")
+    
+    if (token) {
+      setIsLoggedIn(true)
+      setUserRole(role?.toLowerCase() || null)
+    }
+  }, [])
+
   return (
     <div className="flex flex-col min-h-[90vh]">
       {/* HERO SECTION */}
@@ -17,17 +34,29 @@ export default function LandingPage() {
         <p className="text-xl text-muted-foreground max-w-2xl mb-10">
           Seamlessly connect with verified NGOs to donate clothes, electronics, and household items. Schedule a pickup from your doorstep and track your impact.
         </p>
+        
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link href="/register">
-            <Button size="lg" className="h-14 px-8 text-lg gap-2 w-full sm:w-auto shadow-lg hover:shadow-xl transition-shadow">
-              Start Donating <ArrowRight className="w-5 h-5" />
-            </Button>
-          </Link>
-          <Link href="/ngo/requests">
-            <Button size="lg" variant="outline" className="h-14 px-8 text-lg w-full sm:w-auto">
-              I am an NGO
-            </Button>
-          </Link>
+          {/* 2. Smart Dynamic Routing Logic */}
+          {isLoggedIn ? (
+            <Link href={userRole === 'ngo' ? "/ngo/requests" : userRole === 'admin' ? "/admin/dashboard" : "/donor/donate"}>
+              <Button size="lg" className="h-14 px-8 text-lg gap-2 w-full sm:w-auto shadow-lg hover:shadow-xl transition-shadow">
+                Go to Dashboard <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/donor/donate">
+                <Button size="lg" className="h-14 px-8 text-lg gap-2 w-full sm:w-auto shadow-lg hover:shadow-xl transition-shadow">
+                  Start Donating <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+              <Link href="/ngo/requests">
+                <Button size="lg" variant="outline" className="h-14 px-8 text-lg w-full sm:w-auto">
+                  I am an NGO
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
