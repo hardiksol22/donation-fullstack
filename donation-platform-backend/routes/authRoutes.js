@@ -1,108 +1,80 @@
 const express = require('express');
 const router = express.Router();
-const Donation = require('../models/Donation');
-const geocodeAddress = require('../utils/geocode'); 
-
-// 🛡️ Import our Advanced Security Middleware
-const { protect, authorize } = require('../middleware/auth'); 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 // ==========================================
-// 1. CREATE DONATION (Strictly For Donors)
+// TOKEN GENERATOR
 // ==========================================
-router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
+const generateToken = (id) => {
+  // Using the same secret we check in our auth middleware
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret_daansetu_2026', { 
+    expiresIn: '30d' 
+  });
+};
+
+// ==========================================
+// 1. REGISTER ROUTE
+// ==========================================
+router.post('/register', async (req, res) => {
   try {
-    // ⚠️ Security Fix: We no longer trust 'donorId' from req.body. 
-    // We pull it securely from the verified JWT token (req.user._id).
-    const { title, category, description, quantity, condition, pickupAddress, scheduledTime } = req.body;
-
-    // Convert address to coordinates before saving
-    let coordinates = { type: 'Point', coordinates: [0, 0] };
-    if (pickupAddress) {
-      try {
-        coordinates = await geocodeAddress(pickupAddress);
-      } catch (geoErr) {
-        console.error("Geocoding warning:", geoErr.message);
-      }
+    const { name, email, password, role, organizationName, contactNumber } = req.body;
+    
+    // Check if user already exists
+    if (await User.findOne({ email })) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
-    const donation = new Donation({
-      title,
-      description,
-      donorId: req.user._id, // Highly secure mapping
-      category,
-      quantity,
-      condition,
-      pickupAddress,
-      location: coordinates, 
-      scheduledTime,
-      status: 'Available', // Matches our React frontend state
+    // Hash the password securely
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create the user
+    const user = await User.create({
+      name, 
+      email, 
+      password: hashedPassword, 
+      role: role || 'Donor',
+      organizationName, 
+      contactNumber,
+      isVerified: role !== 'NGO' // Donors are auto-verified, NGOs need admin approval
     });
 
-    const savedDonation = await donation.save();
-    return res.status(201).json({ success: true, data: savedDonation });
+    // Send response with Token
+    res.status(201).json({
+      success: true,
+      token: generateToken(user._id),
+      user: { _id: user.id, name: user.name, email: user.email, role: user.role }
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
 // ==========================================
-// 2. GET DONOR'S HISTORY (For Donor Impact Dashboard)
+// 2. LOGIN ROUTE (The one causing the 404!)
 // ==========================================
-router.get('/my-donations', protect, authorize('Donor', 'donor'), async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
-    // Automatically fetches ONLY the donations belonging to the logged-in user
-    const donations = await Donation.find({ donorId: req.user._id }).sort({ createdAt: -1 });
+    const { email, password } = req.body;
     
-    return res.status(200).json({ success: true, count: donations.length, data: donations });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
+    // Find user by email
+    const user = await User.findOne({ email });
 
-// ==========================================
-// 3. GET ACTIVE REQUESTS (For NGO Command Center)
-// ==========================================
-router.get('/available', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), async (req, res) => {
-  try {
-    // Fetch only available donations for NGOs to accept
-    const donations = await Donation.find({ status: 'Available' })
-      .populate('donorId', 'name email contactNumber')
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({ success: true, count: donations.length, data: donations });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ==========================================
-// 4. UPDATE STATUS / ACCEPT PICKUP (For NGOs)
-// ==========================================
-router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const updateFields = { status };
-    
-    // If an NGO is accepting the request, tie their secure user ID to this donation
-    if (status === 'Requested' || status === 'Accepted') {
-      updateFields.ngoId = req.user._id; 
+    // Compare provided password with hashed password in DB
+    if (user && (await bcrypt.compare(password, user.password))) {
+      res.status(200).json({
+        success: true,
+        token: generateToken(user._id),
+        user: { _id: user.id, name: user.name, email: user.email, role: user.role }
+      });
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
-
-    const updatedDonation = await Donation.findByIdAndUpdate(id, updateFields, {
-      new: true,
-      runValidators: true,
-    }).populate('donorId', 'name contactNumber');
-
-    if (!updatedDonation) {
-      return res.status(404).json({ success: false, message: 'Donation request not found' });
-    }
-
-    return res.status(200).json({ success: true, data: updatedDonation });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-module.exports = router;
+module.exports = router; // Make sure it is exported!

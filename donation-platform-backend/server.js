@@ -6,6 +6,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS Configuration
 app.use(cors({
   origin: [
     'http://localhost:3000', 
@@ -17,17 +18,32 @@ app.use(cors({
 
 app.use(express.json()); 
 
+// ==========================================
+// MOUNTING ALL API ROUTES
+// ==========================================
 const authRoutes = require('./routes/authRoutes'); 
-app.use('/api/auth', authRoutes);
+const donationRoutes = require('./routes/donationRoutes'); 
+const adminRoutes = require('./routes/adminRoutes'); 
 
+app.use('/api/auth', authRoutes);
+app.use('/api/donations', donationRoutes); // Added Donation Engine
+app.use('/api/admin', adminRoutes);       // Added Admin Dashboard
+
+// ==========================================
+// HEALTH & ERROR HANDLING
+// ==========================================
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'DaanSetu API is running! 🚀' });
 });
 
+// Fallback for missing routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'API Route Not Found' });
 });
 
+// ==========================================
+// DATABASE CONNECTION
+// ==========================================
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/donation_platform')
   .then(() => {
