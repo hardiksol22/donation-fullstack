@@ -1,192 +1,261 @@
-'use client';
+"use client"
 
-import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import api from '../../../lib/api';
-import { toast } from "sonner"; // <-- Sonner Toast Import
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
+import api from "@/lib/api"
+import { Loader2, UploadCloud, MapPin, Package, Calendar } from "lucide-react"
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { HeartHandshake } from "lucide-react";
-
-export default function DonateItemsPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+export default function DonatePage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   
-  const [ngos, setNgos] = useState<{ _id: string; name: string }[]>([]);
-
   const [formData, setFormData] = useState({
-    category: 'Clothes',
+    title: "",
+    category: "",
+    condition: "Gently Used",
     quantity: 1,
-    condition: 'Gently Used',
-    pickupAddress: '',
-    pickupDate: '',
-    selectedNgo: '',
-  });
+    description: "",
+    pickupAddress: "",
+    scheduledTime: "",
+  })
 
-  // Fetch verified NGOs
-  useEffect(() => {
-    const fetchNGOs = async () => {
-      try {
-        const response = await api.get('/api/ngos'); 
-        setNgos(response.data.data || response.data);
-      } catch (err) {
-        console.error('Failed to load NGOs', err);
-        // Silently fail here so the form still works
-      }
-    };
-    fetchNGOs();
-  }, []);
+  // Handle Form Inputs
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({ ...formData, [name]: value })
+  }
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  // Handle Image Selection & Preview
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      setImagePreview(URL.createObjectURL(file))
+    }
+  }
+
+  // Cloudinary Upload Logic
+  const uploadImageToCloudinary = async (file: File) => {
+    const data = new FormData()
+    data.append("file", file)
+    // ⚠️ Replace 'your_upload_preset' and 'your_cloud_name' with your actual Cloudinary details
+    data.append("upload_preset", "daansetu_preset") 
+    data.append("cloud_name", "your_cloud_name") 
 
     try {
-      const donorId = localStorage.getItem('userId') || 'placeholder-id'; 
-
-      const payload = {
-        donorId: donorId,
-        category: formData.category,
-        quantity: Number(formData.quantity),
-        condition: formData.condition,
-        pickupAddress: formData.pickupAddress,
-        scheduledTime: formData.pickupDate,
-        ngoId: formData.selectedNgo || null,
-      };
-
-      await api.post('/api/donations', payload);
-      
-      // Premium Success Notification 
-      toast.success('Donation request scheduled successfully! ✨');
-      
-      router.push('/donor/history');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to schedule donation.';
-      setError(errorMessage);
-      
-      // Premium Error Notification
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+      const res = await fetch("https://api.cloudinary.com/v1_1/your_cloud_name/image/upload", {
+        method: "POST",
+        body: data,
+      })
+      const uploadedImage = await res.json()
+      return uploadedImage.secure_url
+    } catch (error) {
+      console.error("Cloudinary Upload Error:", error)
+      return null
     }
-  };
+  }
 
-  // Tailwind class for native select styling to match shadcn
-  const selectStyles = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  // Final Form Submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.category) {
+      return toast.error("Please select a category.")
+    }
+
+    try {
+      setLoading(true)
+      let imageUrl = ""
+
+      // Upload image first if selected
+      if (imageFile) {
+        toast.info("Uploading image...", { id: "upload-toast" })
+        imageUrl = await uploadImageToCloudinary(imageFile)
+        if (!imageUrl) throw new Error("Image upload failed")
+      }
+
+      // Prepare final data payload
+      const finalData = {
+        ...formData,
+        imageUrl, // Send the Cloudinary URL to our backend
+      }
+
+      // Send to our secure backend route
+      await api.post('/api/donations', finalData)
+      
+      toast.success("✨ Donation Request Created Successfully!", { id: "upload-toast" })
+      router.push("/donor/history") // Redirect to Impact Dashboard
+    } catch (error: any) {
+      console.error("Donation creation error:", error)
+      const errorMsg = error.response?.data?.message || "Failed to create request. Please try again."
+      toast.error(errorMsg)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] py-10 px-4">
-      <Card className="w-full max-w-2xl shadow-lg border-primary/10">
-        <CardHeader className="space-y-2 text-center pb-6">
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <Card className="border-primary/10 shadow-lg">
+        <CardHeader className="space-y-1 text-center bg-muted/30 pb-8 pt-8 border-b">
           <div className="flex justify-center mb-2">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <HeartHandshake className="h-8 w-8 text-primary" />
+            <div className="bg-primary p-3 rounded-2xl text-primary-foreground shadow-sm">
+              <Package className="h-8 w-8" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-extrabold tracking-tight">Schedule a Donation</CardTitle>
-          <CardDescription className="text-md">
-            Provide the details of the items you wish to donate. Our partners will collect them from your doorstep.
+          <CardTitle className="text-3xl font-extrabold tracking-tight">Donate an Item</CardTitle>
+          <CardDescription className="text-base">
+            Fill in the details below to schedule a pickup by a verified NGO.
           </CardDescription>
         </CardHeader>
         
-        <CardContent>
-          {/* We keep the inline error as a fallback, but toast will also show */}
-          {error && (
-            <div className="p-3 mb-6 text-sm text-red-500 bg-red-100/10 border border-red-500/20 rounded-md">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-6 pt-6">
             
-            {/* Item Details Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold tracking-tight border-b pb-2">Item Details</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <select id="category" name="category" value={formData.category} onChange={handleChange} className={selectStyles}>
-                  <option value="Clothes">Clothes</option>
-                  <option value="Household Items">Household Items</option>
-                  <option value="Books">Books</option>
-                  <option value="Toys">Toys</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input id="quantity" type="number" name="quantity" min="1" value={formData.quantity} onChange={handleChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="condition">Condition</Label>
-                  <select id="condition" name="condition" value={formData.condition} onChange={handleChange} className={selectStyles}>
-                    <option value="New">New</option>
-                    <option value="Gently Used">Gently Used</option>
-                    <option value="Fair">Fair</option>
-                  </select>
-                </div>
+            {/* Image Upload Zone */}
+            <div className="space-y-2">
+              <Label>Item Photo</Label>
+              <div className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-muted/10 relative">
+                <Input 
+                  type="file" 
+                  accept="image/*" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                  onChange={handleImageChange}
+                />
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="h-40 object-contain rounded-md" />
+                ) : (
+                  <>
+                    <UploadCloud className="w-10 h-10 text-muted-foreground mb-3" />
+                    <p className="font-medium text-sm">Click to upload or drag and drop</p>
+                    <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Logistics Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold tracking-tight border-b pb-2">Pickup Logistics</h3>
-              
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Title */}
               <div className="space-y-2">
-                <Label htmlFor="pickupAddress">Pickup Address</Label>
-                <Textarea 
-                  id="pickupAddress" 
-                  name="pickupAddress" 
-                  rows={3} 
-                  value={formData.pickupAddress} 
-                  onChange={handleChange} 
-                  placeholder="Enter your full address for doorstep collection" 
+                <Label htmlFor="title">Item Title</Label>
+                <Input 
+                  id="title" name="title" 
+                  placeholder="e.g., Men's Winter Jacket" 
                   required 
-                  className="resize-none"
+                  value={formData.title} onChange={handleChange} 
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pickupDate">Preferred Date & Time</Label>
-                  <Input id="pickupDate" type="datetime-local" name="pickupDate" value={formData.pickupDate} onChange={handleChange} required />
+              {/* Category */}
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select onValueChange={(val) => handleSelectChange("category", val)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Clothes">Clothes</SelectItem>
+                    <SelectItem value="Electronics">Electronics</SelectItem>
+                    <SelectItem value="Books">Books</SelectItem>
+                    <SelectItem value="Furniture">Furniture</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Condition */}
+              <div className="space-y-2">
+                <Label>Condition</Label>
+                <Select defaultValue={formData.condition} onValueChange={(val) => handleSelectChange("condition", val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="New">New (Unused)</SelectItem>
+                    <SelectItem value="Gently Used">Gently Used</SelectItem>
+                    <SelectItem value="Heavily Used">Heavily Used</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Quantity */}
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input 
+                  id="quantity" name="quantity" 
+                  type="number" min="1" 
+                  required 
+                  value={formData.quantity} onChange={handleChange} 
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description" name="description" 
+                placeholder="Briefly describe the item (size, brand, any defects)..." 
+                className="resize-none" rows={3}
+                value={formData.description} onChange={handleChange} 
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Pickup Address */}
+              <div className="space-y-2">
+                <Label htmlFor="pickupAddress">Pickup Address</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="pickupAddress" name="pickupAddress" 
+                    placeholder="Full street address..." 
+                    className="pl-9" required 
+                    value={formData.pickupAddress} onChange={handleChange} 
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="selectedNgo">Select NGO (Optional)</Label>
-                  <select id="selectedNgo" name="selectedNgo" value={formData.selectedNgo} onChange={handleChange} className={selectStyles}>
-                    <option value="">Any Available NGO</option>
-                    {ngos.map(ngo => (
-                      <option key={ngo._id} value={ngo._id}>{ngo.name}</option>
-                    ))}
-                  </select>
+              </div>
+
+              {/* Scheduled Time */}
+              <div className="space-y-2">
+                <Label htmlFor="scheduledTime">Preferred Pickup Date & Time</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="scheduledTime" name="scheduledTime" 
+                    type="datetime-local" 
+                    className="pl-9" required 
+                    value={formData.scheduledTime} onChange={handleChange} 
+                  />
                 </div>
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-11 text-md font-semibold" disabled={loading}>
-              {loading ? 'Scheduling...' : 'Schedule Pickup'}
+          </CardContent>
+          
+          <CardFooter className="bg-muted/10 p-6 border-t mt-2">
+            <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={loading}>
+              {loading ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Submitting Request...</>
+              ) : (
+                "Schedule Pickup"
+              )}
             </Button>
-          </form>
-        </CardContent>
+          </CardFooter>
+        </form>
       </Card>
     </div>
-  );
+  )
 }

@@ -1,233 +1,186 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShieldCheck, ShieldAlert, CheckCircle, Loader2, Users, Building2, PackageCheck, Target } from "lucide-react"
+import ProtectedRoute from "@/components/ProtectedRoute" // 🛡️ Security Wrapper Imported
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Users, Package, ShieldCheck, Activity, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import api from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 
-interface NGO {
-  _id: string;
-  name: string;
-  email: string;
-  organizationName?: string;
-  contactNumber?: string;
-  isVerified: boolean;
-  createdAt: string;
-}
-
-interface PlatformStats {
-  totalDonors: number;
-  verifiedNgos: number;
-  totalDonations: number;
-  completedCollections: number;
-}
-
-export default function SuperAdminDashboard() {
-  const [ngos, setNgos] = useState<NGO[]>([])
-  const [stats, setStats] = useState<PlatformStats | null>(null)
+export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<any>(null)
+  const [processingId, setProcessingId] = useState<string | null>(null)
 
-  // Fetch both NGOs and Platform Stats
-  const fetchDashboardData = async () => {
+  useEffect(() => {
+    fetchAdminData()
+  }, [])
+
+  const fetchAdminData = async () => {
     try {
-      setLoading(true)
-      
-      // Promise.all se dono APIs ek saath parallel mein fetch hongi (Faster loading)
-      const [ngoRes, statsRes] = await Promise.all([
-        api.get('/api/admin/ngos'),
-        api.get('/api/admin/stats')
-      ])
-
-      setNgos(ngoRes.data.data)
-      setStats(statsRes.data.data)
+      const response = await api.get('/api/admin/stats')
+      setStats(response.data.data)
     } catch (error) {
-      console.error("Failed to fetch admin data", error)
-      toast.error("Failed to load dashboard data. Are you logged in as Admin?")
+      console.error("Failed to fetch admin stats", error)
+      toast.error("Could not load dashboard data.")
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
-
-  // NGO Verification Handler (Updated to match your new backend API)
-  const handleVerify = async (id: string, orgName: string | undefined, currentStatus: boolean) => {
+  const handleVerifyNGO = async (id: string) => {
+    setProcessingId(id)
     try {
-      // API call matching your: router.patch('/ngo/:id/verify', ...)
-      await api.patch(`/api/admin/ngo/${id}/verify`, { 
-        isVerified: !currentStatus // true to approve, false to revoke
-      })
-      
-      // Update local state instantly without page reload
-      setNgos(prev => prev.map(ngo => 
-        ngo._id === id ? { ...ngo, isVerified: !currentStatus } : ngo
-      ))
-      
-      if (!currentStatus) {
-        toast.success(`${orgName || 'NGO'} has been successfully verified! 🛡️`)
-        // Update live stats card slightly to reflect new verification
-        if (stats) setStats({ ...stats, verifiedNgos: stats.verifiedNgos + 1 })
-      } else {
-        toast.error(`Verification revoked for ${orgName || 'NGO'}.`)
-        if (stats) setStats({ ...stats, verifiedNgos: stats.verifiedNgos - 1 })
-      }
-
+      await api.patch(`/api/admin/verify-ngo/${id}`)
+      toast.success("NGO has been officially verified! ✅")
+      // Remove the verified NGO from the pending list locally
+      setStats((prev: any) => ({
+        ...prev,
+        pendingNGOs: prev.pendingNGOs.filter((ngo: any) => ngo._id !== id)
+      }))
     } catch (error) {
-      toast.error("Failed to update verification status.")
+      toast.error("Verification failed. Please try again.")
+    } finally {
+      setProcessingId(null)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium animate-pulse">Initializing Admin Workspace...</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="container mx-auto py-10 max-w-7xl px-4">
-      {/* Header Section */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-primary/10 text-primary rounded-xl">
-          <ShieldCheck className="h-8 w-8" />
+    // 🛡️ Wrapping the entire dashboard to strictly allow only 'admin' role
+    <ProtectedRoute allowedRoles={['admin']}>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-extrabold tracking-tight">Platform Overview</h1>
+          <p className="text-muted-foreground mt-1">Monitor platform health, active users, and verify NGO partners.</p>
         </div>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Super Admin Portal</h1>
-          <p className="text-muted-foreground mt-1">Platform overview and user verification management.</p>
-        </div>
-      </div>
 
-      {/* KPI Stats Section (From your /stats API) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card className="shadow-sm border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Donors</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{loading ? "..." : stats?.totalDonors || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Registered individuals</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="shadow-sm border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Verified NGOs</CardTitle>
-            <Building2 className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{loading ? "..." : stats?.verifiedNgos || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Approved partners</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Donations</CardTitle>
-            <Target className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{loading ? "..." : stats?.totalDonations || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Platform-wide requests</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-primary/10 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-primary">Completed Collections</CardTitle>
-            <PackageCheck className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">{loading ? "..." : stats?.completedCollections || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Successfully delivered items</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* NGO Management Table */}
-      <Card className="border-primary/10 shadow-sm">
-        <CardHeader className="bg-muted/30 border-b">
-          <CardTitle>Registered Organizations</CardTitle>
-          <CardDescription>Review and approve new NGO registrations below.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="pl-6">Organization Details</TableHead>
-                <TableHead>Contact Person</TableHead>
-                <TableHead>Joined On</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right pr-6">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />
-                    <p className="text-muted-foreground">Loading platform data...</p>
-                  </TableCell>
-                </TableRow>
-              ) : ngos.length > 0 ? (
-                ngos.map((ngo) => (
-                  <TableRow key={ngo._id} className="transition-colors hover:bg-muted/30">
-                    <TableCell className="pl-6">
-                      <div className="font-bold text-md">{ngo.organizationName || 'N/A'}</div>
-                      <div className="text-sm text-muted-foreground">{ngo.email}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{ngo.name}</div>
-                      <div className="text-sm text-muted-foreground">{ngo.contactNumber || 'No contact provided'}</div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(ngo.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {ngo.isVerified ? (
-                        <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
-                          <CheckCircle className="mr-1 h-3 w-3" /> Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 bg-amber-500/10">
-                          <ShieldAlert className="mr-1 h-3 w-3" /> Pending Review
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      {!ngo.isVerified ? (
-                        <Button 
-                          size="sm" 
-                          className="h-8"
-                          onClick={() => handleVerify(ngo._id, ngo.organizationName, ngo.isVerified)}
-                        >
-                          Approve Access
-                        </Button>
-                      ) : (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
-                          onClick={() => handleVerify(ngo._id, ngo.organizationName, ngo.isVerified)}
-                        >
-                          Revoke Access
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
-                    <ShieldCheck className="h-10 w-10 text-muted/50 mb-3 mx-auto" />
-                    <p className="font-medium text-lg">No NGOs found</p>
-                    <p className="text-sm">There are no NGO accounts registered on the platform yet.</p>
-                  </TableCell>
-                </TableRow>
+        <Tabs defaultValue="overview" className="space-y-8">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="overview">Live Metrics</TabsTrigger>
+            <TabsTrigger value="ngos">
+              Pending Approvals 
+              {stats?.pendingNGOs?.length > 0 && (
+                <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center">
+                  {stats.pendingNGOs.length}
+                </Badge>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="border-primary/10 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Donors</CardTitle>
+                  <Users className="w-4 h-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats?.users?.totalDonors || 0}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/10 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Verified NGOs</CardTitle>
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats?.users?.totalNGOs || 0}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/10 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Donations</CardTitle>
+                  <Package className="w-4 h-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats?.donations?.totalDonations || 0}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/10 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Completed Pickups</CardTitle>
+                  <Activity className="w-4 h-4 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats?.donations?.completedPickups || 0}</div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="ngos">
+            <Card className="border-primary/10 shadow-sm">
+              <CardHeader>
+                <CardTitle>NGO Verification Queue</CardTitle>
+                <CardDescription>Review and authorize new organizations to participate on the platform.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {stats?.pendingNGOs?.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/10 rounded-lg border border-dashed">
+                    <ShieldCheck className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                    <p className="text-lg font-medium">All caught up!</p>
+                    <p className="text-muted-foreground">There are no pending NGOs awaiting verification.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead>Organization Name</TableHead>
+                          <TableHead>Representative</TableHead>
+                          <TableHead>Email Contact</TableHead>
+                          <TableHead>Joined Date</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stats?.pendingNGOs?.map((ngo: any) => (
+                          <TableRow key={ngo._id} className="hover:bg-muted/30">
+                            <TableCell className="font-semibold">{ngo.organizationName || 'N/A'}</TableCell>
+                            <TableCell>{ngo.name}</TableCell>
+                            <TableCell>{ngo.email}</TableCell>
+                            <TableCell>{new Date(ngo.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleVerifyNGO(ngo._id)}
+                                disabled={processingId === ngo._id}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                              >
+                                {processingId === ngo._id ? (
+                                  <><Loader2 className="w-4 h-4 animate-spin" /> Approving...</>
+                                ) : (
+                                  <><CheckCircle2 className="w-4 h-4" /> Approve</>
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </ProtectedRoute>
   )
 }

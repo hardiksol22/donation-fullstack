@@ -1,62 +1,73 @@
-"use client"
-
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { motion } from "framer-motion"
-import { ArrowRight, Heart } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { HeartHandshake, ArrowRight, Recycle, MapPin } from "lucide-react"
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center text-center pt-24 pb-16 px-4">
-      
-      {/* Top Badge */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6 inline-block border border-primary/20 shadow-sm">
-          ✨ DaanSetu OS is Live
-        </span>
-      </motion.div>
+    <div className="flex flex-col min-h-[90vh]">
+      {/* HERO SECTION */}
+      <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 bg-gradient-to-b from-primary/10 via-background to-background">
+        <Badge className="mb-6 px-4 py-1.5 text-sm" variant="secondary">
+          Empowering Communities 🌱
+        </Badge>
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight max-w-4xl mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+          Give Your Items a <span className="text-primary">Second Life.</span>
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mb-10">
+          Seamlessly connect with verified NGOs to donate clothes, electronics, and household items. Schedule a pickup from your doorstep and track your impact.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <Link href="/register">
+            <Button size="lg" className="h-14 px-8 text-lg gap-2 w-full sm:w-auto shadow-lg hover:shadow-xl transition-shadow">
+              Start Donating <ArrowRight className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/ngo/requests">
+            <Button size="lg" variant="outline" className="h-14 px-8 text-lg w-full sm:w-auto">
+              I am an NGO
+            </Button>
+          </Link>
+        </div>
+      </section>
 
-      {/* Main Headline */}
-      <motion.h1
-        className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-4xl mb-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        The Operating System for <br className="hidden md:block" />
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600">
-          Modern Fundraising
-        </span>
-      </motion.h1>
-
-      {/* Subtitle */}
-      <motion.p
-        className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        A powerful, AI-driven platform connecting donors with verified organizations. Experience seamless donations, transparent tracking, and real-time impact.
-      </motion.p>
-
-      {/* Call to Action Buttons */}
-      <motion.div
-        className="flex flex-col sm:flex-row gap-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <Button size="lg" className="rounded-full px-8 h-12 text-md transition-transform hover:scale-105">
-          Start a Campaign <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-        <Button size="lg" variant="outline" className="rounded-full px-8 h-12 text-md transition-transform hover:scale-105">
-          <Heart className="mr-2 h-4 w-4 text-rose-500" /> Explore Causes
-        </Button>
-      </motion.div>
-      
+      {/* HOW IT WORKS SECTION */}
+      <section className="py-24 bg-muted/30 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">How It Works</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              A streamlined, technology-driven process designed for maximum social impact with minimal effort.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center text-center p-8 bg-background rounded-2xl shadow-sm border border-primary/10 hover:border-primary/40 transition-colors">
+              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                <Recycle className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">1. List Your Items</h3>
+              <p className="text-muted-foreground">Upload a quick photo and details of the gently used items you wish to donate.</p>
+            </div>
+            
+            <div className="flex flex-col items-center text-center p-8 bg-background rounded-2xl shadow-sm border border-primary/10 hover:border-primary/40 transition-colors">
+              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                <MapPin className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">2. Smart Matching</h3>
+              <p className="text-muted-foreground">Our geographic routing instantly alerts verified local NGOs about your available donation.</p>
+            </div>
+            
+            <div className="flex flex-col items-center text-center p-8 bg-background rounded-2xl shadow-sm border border-primary/10 hover:border-primary/40 transition-colors">
+              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                <HeartHandshake className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">3. Doorstep Pickup</h3>
+              <p className="text-muted-foreground">An NGO representative will accept the request and pick up the item directly from your address.</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
