@@ -1,72 +1,52 @@
 const express = require('express');
 const router = express.Router();
+const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 const Donation = require('../models/Donation');
-const { protect, authorize } = require('../middleware/auth');
 
-// Apply protection and Admin-only authorization to all routes in this router
-router.use(protect);
-router.use(authorize('Admin'));
-
-// 1. Fetch all NGOs (Pending and Verified)
-router.get('/ngos', async (req, res) => {
+// @desc    Get complete platform statistics
+// @route   GET /api/admin/stats
+// @access  Private (Admin Only)
+router.get('/stats', protect, authorize('Admin', 'admin'), async (req, res) => {
   try {
-    const { status } = req.query; // Optional: filter by ?status=pending
-    const filter = { role: 'NGO' };
+    const totalDonors = await User.countDocuments({ role: { $regex: /^donor$/i } });
+    const totalNGOs = await User.countDocuments({ role: { $regex: /^ngo$/i } });
+    const pendingNGOs = await User.find({ role: { $regex: /^ngo$/i }, isVerified: false }).select('-password');
     
-    if (status === 'pending') {
-      filter.isVerified = false;
-    } else if (status === 'verified') {
-      filter.isVerified = true;
-    }
-
-    const ngos = await User.find(filter).select('-password').sort({ createdAt: -1 });
-    return res.status(200).json({ success: true, count: ngos.length, data: ngos });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// 2. Verify or Reject an NGO
-router.patch('/ngo/:id/verify', async (req, res) => {
-  try {
-    const { isVerified } = req.body; // true to approve, false to revoke
-
-    const updatedNgo = await User.findByIdAndUpdate(
-      req.params.id,
-      { isVerified },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!updatedNgo) {
-      return res.status(404).json({ success: false, message: 'NGO not found' });
-    }
-
-    return res.status(200).json({ success: true, data: updatedNgo });
-  } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
-  }
-});
-
-// 3. Platform Overview Statistics (KPIs)
-router.get('/stats', async (req, res) => {
-  try {
-    const totalDonors = await User.countDocuments({ role: 'Donor' });
-    const verifiedNgos = await User.countDocuments({ role: 'NGO', isVerified: true });
     const totalDonations = await Donation.countDocuments();
-    const completedCollections = await Donation.countDocuments({ status: 'Collected' });
+    const completedPickups = await Donation.countDocuments({ status: 'Completed' });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       data: {
-        totalDonors,
-        verifiedNgos,
-        totalDonations,
-        completedCollections
+        users: { totalDonors, totalNGOs },
+        donations: { totalDonations, completedPickups },
+        pendingNGOs
       }
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @desc    Verify an NGO
+// @route   PATCH /api/admin/verify-ngo/:id
+// @access  Private (Admin Only)
+router.patch('/verify-ngo/:id', protect, authorize('Admin', 'admin'), async (req, res) => {
+  try {
+    const ngo = await User.findByIdAndUpdate(
+      req.params.id, 
+      { isVerified: true }, 
+      { new: true }
+    ).select('-password');
+
+    if (!ngo) {
+      return res.status(404).json({ success: false, message: 'NGO not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'NGO Verified Successfully', data: ngo });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 

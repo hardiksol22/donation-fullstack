@@ -1,75 +1,23 @@
-// routes/donationRoutes.js
 const express = require('express');
 const router = express.Router();
-const Donation = require('../models/Donation');
-const geocodeAddress = require('../utils/geocode'); // Added geocoding utility
+const { protect, authorize } = require('../middleware/auth');
+const { 
+  createDonation, 
+  getMyDonations, 
+  getAvailableDonations, 
+  updateDonationStatus 
+} = require('../controllers/donationController');
 
-// 1. Create a new donation request (Donor)
-router.post('/', async (req, res) => {
-  try {
-    const { donorId, category, quantity, condition, pickupAddress, scheduledTime, ngoId } = req.body;
+// 1. CREATE DONATION (Strictly For Donors)
+router.post('/', protect, authorize('Donor', 'donor'), createDonation);
 
-    // Convert address to coordinates before saving
-    const coordinates = await geocodeAddress(pickupAddress);
+// 2. GET DONOR'S HISTORY (For Donor Impact Dashboard)
+router.get('/my-donations', protect, authorize('Donor', 'donor'), getMyDonations);
 
-    const donation = new Donation({
-      donorId,
-      category,
-      quantity,
-      condition,
-      pickupAddress,
-      location: coordinates, // Save generated coordinates mapping to the new schema
-      scheduledTime,
-      ngoId: ngoId || null,
-      status: 'Pending',
-    });
+// 3. GET ACTIVE REQUESTS (For NGO Command Center)
+router.get('/available', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), getAvailableDonations);
 
-    const savedDonation = await donation.save();
-    return res.status(201).json({ success: true, data: savedDonation });
-  } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
-  }
-});
-
-// 2. Fetch all active donation requests (NGO/Admin Dashboard)
-router.get('/', async (req, res) => {
-  try {
-    const { status } = req.query;
-    const filter = status ? { status } : {};
-
-    const donations = await Donation.find(filter)
-      .populate('donorId', 'name email contactNumber')
-      .populate('ngoId', 'organizationName email')
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({ success: true, count: donations.length, data: donations });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// 3. Update donation status (Accept or Mark Collected)
-router.patch('/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, ngoId } = req.body;
-
-    const updateFields = { status };
-    if (ngoId) updateFields.ngoId = ngoId;
-
-    const updatedDonation = await Donation.findByIdAndUpdate(id, updateFields, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedDonation) {
-      return res.status(404).json({ success: false, message: 'Donation request not found' });
-    }
-
-    return res.status(200).json({ success: true, data: updatedDonation });
-  } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
-  }
-});
+// 4. UPDATE STATUS / ACCEPT PICKUP (For NGOs & Admins)
+router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), updateDonationStatus);
 
 module.exports = router;
