@@ -1,94 +1,95 @@
-'use client';
-import { useState, ChangeEvent, FormEvent } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import api from '../../lib/api'; // Axios API instance
+"use client"
+
+import { useState, FormEvent } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import api from "../../lib/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Loader2 } from "lucide-react"
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
-  };
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    e.preventDefault()
+    setLoading(true)
+    setError("")
 
     try {
-      // Backend par POST request bhejna login ke liye
-      const response = await api.post('/auth/login', credentials);
+      // API call to verify user and get token
+      const response = await api.post("/api/auth/login", formData)
       
-      // Token aur user role ko localStorage mein save karna
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userRole', response.data.role);
+      // Data extract karein
+      const { token, user } = response.data
 
-      alert('Login Successful!');
-      
-      // User ke role ke hisaab se dashboard par bhejna
-      if (response.data.role === 'Admin') {
-        router.push('/admin/dashboard');
-      } else if (response.data.role === 'NGO') {
-        router.push('/ngo/requests');
+      // Browser mein session save karein
+      localStorage.setItem("token", token)
+      localStorage.setItem("userId", user._id)
+      localStorage.setItem("userRole", user.role)
+
+      // Role ke hisab se redirect karein (Donor Home ya NGO Dashboard)
+      if (user.role === "ngo") {
+        router.push("/ngo/requests")
       } else {
-        router.push('/donor/donate');
+        router.push("/donor/donate") // Redirects to Donor Home
       }
+      
     } catch (err: any) {
-      // API se aane wale error ko UI par dikhana
-      setError(err.response?.data?.message || 'Invalid email or password');
+      setError(err.response?.data?.message || "Invalid email or password.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="row justify-content-center mt-5">
-      <div className="col-md-6 col-lg-4">
-        <div className="card shadow-sm">
-          <div className="card-body p-4">
-            <h3 className="text-center mb-4">Welcome Back</h3>
-            
-            {/* Error Message Alert */}
-            {error && <div className="alert alert-danger py-2">{error}</div>}
-
-            <form onSubmit={handleSubmit}>
-              <div className="mb-3">
-                <label className="form-label">Email address</label>
-                <input 
-                  type="email" 
-                  className="form-control" 
-                  name="email"
-                  value={credentials.email}
-                  onChange={handleChange}
-                  required 
-                />
-              </div>
-              <div className="mb-4">
-                <label className="form-label">Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
-                  name="password"
-                  value={credentials.password}
-                  onChange={handleChange}
-                  required 
-                />
-              </div>
-              <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
-              </button>
-            </form>
-            <div className="text-center mt-3">
-              <small>Don't have an account? <Link href="/register">Sign up here</Link></small>
+    <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <Card className="w-full max-w-md shadow-lg border-primary/10">
+        <CardHeader className="space-y-1 text-center pb-6">
+          <CardTitle className="text-3xl font-extrabold tracking-tight">Welcome back</CardTitle>
+          <CardDescription>Enter your email and password to access your account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && <div className="p-3 mb-4 text-sm text-red-500 bg-red-100/10 border border-red-500/20 rounded-md">{error}</div>}
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" placeholder="name@example.com" required onChange={handleChange} />
             </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="#" className="text-sm font-medium text-primary hover:underline">Forgot password?</Link>
+              </div>
+              <Input id="password" name="password" type="password" required onChange={handleChange} />
+            </div>
+            <Button type="submit" className="w-full h-11 text-md font-semibold mt-4" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-center text-sm text-muted-foreground pt-2 pb-6">
+          <div>
+            Don't have an account?{" "}
+            <Link href="/register" className="font-semibold text-primary hover:underline">Sign up</Link>
           </div>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
-  );
+  )
 }
