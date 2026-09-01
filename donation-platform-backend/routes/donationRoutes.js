@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Donation = require('../models/Donation');
 const geocodeAddress = require('../utils/geocode'); 
+const sendEmail = require('../utils/sendEmail'); // 📩 1. Imported Email Utility
 
 // 🛡️ Import our Advanced Security Middleware
 const { protect, authorize } = require('../middleware/auth'); 
@@ -72,28 +73,18 @@ router.get('/available', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), asy
 
 // ==========================================
 // 4. GET IMPACT LEADERBOARD (Real Aggregation)
-// ⚠️ CRITICAL: Kept ABOVE the /:id route below
 // ==========================================
 router.get('/leaderboard', protect, async (req, res) => {
   try {
     const topDonors = await Donation.aggregate([
-      // 1. Sirf valid donations count karein
       { $match: { status: { $ne: 'Cancelled' } } },
-      
-      // 2. Har Donor ke total items aur frequency group karein
       { $group: { 
           _id: '$donorId', 
           totalItemsDonated: { $sum: '$quantity' }, 
           donationCount: { $sum: 1 } 
       } },
-      
-      // 3. Sabse zyada items donate karne walon ko top par rakhein
       { $sort: { totalItemsDonated: -1 } },
-      
-      // 4. Sirf top 10 heroes ko dikhayen
       { $limit: 10 },
-      
-      // 5. Users collection se unka real naam (name) fetch karein
       { $lookup: { 
           from: 'users', 
           localField: '_id', 
@@ -101,8 +92,6 @@ router.get('/leaderboard', protect, async (req, res) => {
           as: 'donorDetails' 
       } },
       { $unwind: '$donorDetails' },
-      
-      // 6. Final JSON structure jo frontend par jayega
       { $project: { 
           _id: 1, 
           name: '$donorDetails.name', 
@@ -135,10 +124,35 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
     const updatedDonation = await Donation.findByIdAndUpdate(id, updateFields, {
       new: true,
       runValidators: true,
-    }).populate('donorId', 'name contactNumber');
+    }).populate('donorId', 'name email contactNumber'); // 📩 2. Added 'email' to populate
 
     if (!updatedDonation) {
       return res.status(404).json({ success: false, message: 'Donation request not found' });
+    }
+
+    // 📩 3. NEW: SEND AUTOMATED EMAIL IF ACCEPTED
+    if (status === 'Accepted' && updatedDonation.donorId.email) {
+      try {
+        const emailHTML = `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eaeaea; border-radius: 10px;">
+            <h2 style="color: #10b981;">Good News, ${updatedDonation.donorId.name}! 🎉</h2>
+            <p>Your donation request for <strong>"${updatedDonation.title}"</strong> has been officially accepted by a verified NGO.</p>
+            <p>Their representative will contact you shortly at <strong>${updatedDonation.donorId.contactNumber}</strong> to coordinate the exact pickup time.</p>
+            <br>
+            <p>Thank you for making a difference in the community!</p>
+            <p><strong>- The Platform Team</strong></p>
+          </div>
+        `;
+        
+        await sendEmail({
+          email: updatedDonation.donorId.email,
+          subject: 'Donation Accepted for Pickup! 🚚',
+          html: emailHTML
+        });
+      } catch (emailError) {
+        console.error("Email could not be sent:", emailError);
+        // Does not crash the API if email fails
+      }
     }
 
     return res.status(200).json({ success: true, data: updatedDonation });
