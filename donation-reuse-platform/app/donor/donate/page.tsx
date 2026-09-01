@@ -50,15 +50,26 @@ export default function DonatePage() {
   const uploadImageToCloudinary = async (file: File) => {
     const data = new FormData()
     data.append("file", file)
-    // ⚠️ Replace 'your_upload_preset' and 'your_cloud_name' with your actual Cloudinary details
-    data.append("upload_preset", "daansetu_preset") 
-    data.append("cloud_name", "your_cloud_name") 
+    
+    // ⚠️ IMPORTANT: Aapke Cloudinary dashboard mein 'daansetu_preset' naam ka 'Unsigned' preset hona zaroori hai!
+    data.append("upload_preset", "daansetu_uploads") 
+    
+    // 🛠️ Yahan aapka asli cloud name daal diya gaya hai
+    data.append("cloud_name", "xw8menbd") 
 
     try {
-      const res = await fetch("https://api.cloudinary.com/v1_1/your_cloud_name/image/upload", {
+      // 🛠️ Yahan URL mein bhi aapka asli cloud name 'xw8menbd' daal diya gaya hai
+      const res = await fetch("https://api.cloudinary.com/v1_1/xw8menbd/image/upload", {
         method: "POST",
         body: data,
       })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        console.error("Cloudinary Detailed Error:", errData)
+        throw new Error("Cloudinary rejected the upload")
+      }
+
       const uploadedImage = await res.json()
       return uploadedImage.secure_url
     } catch (error) {
@@ -83,7 +94,11 @@ export default function DonatePage() {
       if (imageFile) {
         toast.info("Uploading image...", { id: "upload-toast" })
         imageUrl = await uploadImageToCloudinary(imageFile)
-        if (!imageUrl) throw new Error("Image upload failed")
+        
+        if (!imageUrl) {
+            toast.error("Image upload failed. Check your Cloudinary preset.", { id: "upload-toast" })
+            throw new Error("Image upload failed")
+        }
       }
 
       // Prepare final data payload
@@ -100,7 +115,7 @@ export default function DonatePage() {
     } catch (error: any) {
       console.error("Donation creation error:", error)
       const errorMsg = error.response?.data?.message || "Failed to create request. Please try again."
-      toast.error(errorMsg)
+      toast.error(errorMsg, { id: "upload-toast" })
     } finally {
       setLoading(false)
     }
