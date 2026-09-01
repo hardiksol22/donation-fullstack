@@ -1,5 +1,11 @@
-// File ke top par yeh import ensure karein:
+const express = require('express');
+const router = express.Router();
+const User = require('../models/User'); // ⚠️ Yeh zaroori hai taaki User.findById chal sake
 const { protect } = require('../middleware/auth');
+
+// ==========================================
+// (Agar aapke REGISTER aur LOGIN routes the, toh unhe yahan rakhna mat bhoolna)
+// ==========================================
 
 // ==========================================
 // 3. GET REAL USER PROFILE (Real DB Fetch)
