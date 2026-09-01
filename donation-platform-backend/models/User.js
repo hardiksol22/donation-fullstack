@@ -15,9 +15,9 @@ const userSchema = new mongoose.Schema({
 // 1. ENCRYPT PASSWORD BEFORE SAVING
 // ==========================================
 userSchema.pre('save', async function (next) {
-  // Agar password modify nahi hua hai, toh aage badho
+  // Agar password modify nahi hua hai, toh wahi se return ho jao
   if (!this.isModified('password')) {
-    next();
+    return next(); // ⚠️ FIX: Added 'return' to stop execution here
   }
   // Password ko securely hash karo
   const salt = await bcrypt.genSalt(10);
