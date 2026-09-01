@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import ProtectedRoute from "@/components/ProtectedRoute" // 🛡️ Security Wrapper Imported
+import ProtectedRoute from "@/components/ProtectedRoute" 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -37,7 +37,6 @@ export default function AdminDashboard() {
     try {
       await api.patch(`/api/admin/verify-ngo/${id}`)
       toast.success("NGO has been officially verified! ✅")
-      // Remove the verified NGO from the pending list locally
       setStats((prev: any) => ({
         ...prev,
         pendingNGOs: prev.pendingNGOs.filter((ngo: any) => ngo._id !== id)
@@ -59,7 +58,6 @@ export default function AdminDashboard() {
   }
 
   return (
-    // 🛡️ Wrapping the entire dashboard to strictly allow only 'admin' role
     <ProtectedRoute allowedRoles={['admin']}>
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
