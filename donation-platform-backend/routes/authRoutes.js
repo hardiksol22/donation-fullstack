@@ -1,18 +1,93 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User'); // ⚠️ Yeh zaroori hai taaki User.findById chal sake
+const jwt = require('jsonwebtoken');
+const User = require('../models/User'); 
 const { protect } = require('../middleware/auth');
 
-// ==========================================
-// (Agar aapke REGISTER aur LOGIN routes the, toh unhe yahan rakhna mat bhoolna)
-// ==========================================
+// Helper Function: Generate JWT Token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret', {
+    expiresIn: '30d',
+  });
+};
 
 // ==========================================
-// 3. GET REAL USER PROFILE (Real DB Fetch)
+// 1. REGISTER NEW USER
+// ==========================================
+router.post('/register', async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+    }
+
+    // Create new user in DB
+    const user = await User.create({ name, email, password, role });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// 2. LOGIN USER
+// ==========================================
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user and explicitly select password (since it's usually hidden)
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid Email or Password' });
+    }
+
+    // Smart Password Check: Uses schema method if exists, else falls back to bcrypt
+    let isMatch = false;
+    if (typeof user.matchPassword === 'function') {
+      isMatch = await user.matchPassword(password);
+    } else {
+      const bcrypt = require('bcryptjs');
+      isMatch = await bcrypt.compare(password, user.password);
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid Email or Password' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// 3. GET REAL USER PROFILE
 // ==========================================
 router.get('/profile', protect, async (req, res) => {
   try {
-    // Fetch the real user from MongoDB using their secure JWT token
     const user = await User.findById(req.user._id).select('-password');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -24,13 +99,12 @@ router.get('/profile', protect, async (req, res) => {
 });
 
 // ==========================================
-// 4. UPDATE USER PROFILE (Real DB Update)
+// 4. UPDATE USER PROFILE
 // ==========================================
 router.put('/profile', protect, async (req, res) => {
   try {
     const { name, contactNumber, address } = req.body;
     
-    // Update real details in MongoDB
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { name, contactNumber, address },
