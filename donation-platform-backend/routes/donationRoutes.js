@@ -12,7 +12,8 @@ const { protect, authorize } = require('../middleware/auth');
 // ==========================================
 router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
   try {
-    const { title, category, description, quantity, condition, pickupAddress, scheduledTime } = req.body;
+    // 🛠️ FIX: Added 'imageUrl' here to receive the photo from the frontend
+    const { title, category, description, quantity, condition, pickupAddress, scheduledTime, imageUrl } = req.body;
 
     // Convert address to coordinates before saving
     let coordinates = { type: 'Point', coordinates: [0, 0] };
@@ -34,6 +35,7 @@ router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
       pickupAddress,
       location: coordinates, 
       scheduledTime,
+      imageUrl, // 🛠️ FIX: Passed the image URL to be saved in MongoDB
       status: 'Available',
     });
 
