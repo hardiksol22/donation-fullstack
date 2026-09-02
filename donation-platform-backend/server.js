@@ -16,13 +16,13 @@ const corsOptions = {
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  // 🔥 YAHAN FIX KIYA HAI: Authorization header aur token ko explicitly allow karna zaroori hai
   allowedHeaders: ['Content-Type', 'Authorization'] 
 };
 
 app.use(cors(corsOptions));
-// 🔥 YAHAN FIX KIYA HAI: Browser ki 'OPTIONS' (preflight) request ko handle karne ke liye
-app.options('*', cors(corsOptions)); 
+
+// 🔥 YAHAN FIX KIYA HAI: '*' ki jagah '/*' kar diya hai taaki server crash na ho
+app.options('/*', cors(corsOptions)); 
 
 app.use(express.json()); 
 
