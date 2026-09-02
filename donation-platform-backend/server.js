@@ -19,10 +19,8 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'] 
 };
 
+// Yeh ek line hi kaafi hai preflight aur headers handle karne ke liye!
 app.use(cors(corsOptions));
-
-// 🔥 YAHAN FIX KIYA HAI: '*' ki jagah '/*' kar diya hai taaki server crash na ho
-app.options('/*', cors(corsOptions)); 
 
 app.use(express.json()); 
 
