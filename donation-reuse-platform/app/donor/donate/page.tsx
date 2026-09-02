@@ -28,16 +28,15 @@ export default function DonatePage() {
     scheduledTime: "",
   })
 
-  // Handle Form Inputs
+  // 🔥 FIX 1: Use 'prev' state to prevent data loss (Stale Closure Fix)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value })
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  // Handle Image Selection & Preview
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -46,19 +45,13 @@ export default function DonatePage() {
     }
   }
 
-  // Cloudinary Upload Logic
   const uploadImageToCloudinary = async (file: File) => {
     const data = new FormData()
     data.append("file", file)
-    
-    // ⚠️ IMPORTANT: Aapke Cloudinary dashboard mein 'daansetu_preset' naam ka 'Unsigned' preset hona zaroori hai!
     data.append("upload_preset", "daansetu_uploads") 
-    
-    // 🛠️ Yahan aapka asli cloud name daal diya gaya hai
     data.append("cloud_name", "xw8menbd") 
 
     try {
-      // 🛠️ Yahan URL mein bhi aapka asli cloud name 'xw8menbd' daal diya gaya hai
       const res = await fetch("https://api.cloudinary.com/v1_1/xw8menbd/image/upload", {
         method: "POST",
         body: data,
@@ -78,7 +71,6 @@ export default function DonatePage() {
     }
   }
 
-  // Final Form Submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -90,28 +82,25 @@ export default function DonatePage() {
       setLoading(true)
       let imageUrl = ""
 
-      // Upload image first if selected
       if (imageFile) {
         toast.info("Uploading image...", { id: "upload-toast" })
         imageUrl = await uploadImageToCloudinary(imageFile)
         
         if (!imageUrl) {
-            toast.error("Image upload failed. Check your Cloudinary preset.", { id: "upload-toast" })
-            throw new Error("Image upload failed")
+          toast.error("Image upload failed. Check your Cloudinary preset.", { id: "upload-toast" })
+          throw new Error("Image upload failed")
         }
       }
 
-      // Prepare final data payload
       const finalData = {
         ...formData,
-        imageUrl, // Send the Cloudinary URL to our backend
+        imageUrl,
       }
 
-      // Send to our secure backend route
       await api.post('/api/donations', finalData)
       
       toast.success("✨ Donation Request Created Successfully!", { id: "upload-toast" })
-      router.push("/donor/history") // Redirect to Impact Dashboard
+      router.push("/donor/history") 
     } catch (error: any) {
       console.error("Donation creation error:", error)
       const errorMsg = error.response?.data?.message || "Failed to create request. Please try again."
@@ -139,7 +128,6 @@ export default function DonatePage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6 pt-6">
             
-            {/* Image Upload Zone */}
             <div className="space-y-2">
               <Label>Item Photo</Label>
               <div className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-muted/10 relative">
@@ -162,7 +150,6 @@ export default function DonatePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Item Title</Label>
                 <Input 
@@ -173,10 +160,10 @@ export default function DonatePage() {
                 />
               </div>
 
-              {/* Category */}
+              {/* 🔥 FIX 2: Added `value={formData.category}` to tightly control the Select */}
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select onValueChange={(val) => handleSelectChange("category", val)}>
+                <Select value={formData.category} onValueChange={(val) => handleSelectChange("category", val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -190,22 +177,21 @@ export default function DonatePage() {
                 </Select>
               </div>
 
-              {/* Condition */}
+              {/* 🔥 FIX 3: Changed 'Heavily Used' to 'Fair' to match MongoDB strict enum */}
               <div className="space-y-2">
                 <Label>Condition</Label>
-                <Select defaultValue={formData.condition} onValueChange={(val) => handleSelectChange("condition", val)}>
+                <Select value={formData.condition} onValueChange={(val) => handleSelectChange("condition", val)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="New">New (Unused)</SelectItem>
                     <SelectItem value="Gently Used">Gently Used</SelectItem>
-                    <SelectItem value="Heavily Used">Heavily Used</SelectItem>
+                    <SelectItem value="Fair">Fair / Heavily Used</SelectItem> 
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Quantity */}
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantity</Label>
                 <Input 
@@ -217,7 +203,6 @@ export default function DonatePage() {
               </div>
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea 
@@ -229,7 +214,6 @@ export default function DonatePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Pickup Address */}
               <div className="space-y-2">
                 <Label htmlFor="pickupAddress">Pickup Address</Label>
                 <div className="relative">
@@ -243,7 +227,6 @@ export default function DonatePage() {
                 </div>
               </div>
 
-              {/* Scheduled Time */}
               <div className="space-y-2">
                 <Label htmlFor="scheduledTime">Preferred Pickup Date & Time</Label>
                 <div className="relative">

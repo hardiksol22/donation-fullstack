@@ -3,9 +3,13 @@ const mongoose = require('mongoose');
 const donationSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true // Frontend se aane wala 'Mens Jackets' ab yahan save hoga
+    required: true
   },
   description: {
+    type: String
+  },
+  // 🔥 FIX 4: Added imageUrl to save your Cloudinary links
+  imageUrl: {
     type: String
   },
   donorId: { 
