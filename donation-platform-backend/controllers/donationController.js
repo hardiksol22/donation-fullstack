@@ -27,7 +27,7 @@ const createDonation = async (req, res) => {
       pickupAddress,
       location: coordinates,
       scheduledTime,
-      status: 'Available', // Default state for new requests
+      status: 'Pending', // 🔥 Synced with Model
       donorId: req.user._id // Secured via JWT middleware
     });
 
@@ -49,12 +49,12 @@ const getMyDonations = async (req, res) => {
   }
 };
 
-// @desc    Get all available donations
+// @desc    Get all available donations (Pending requests for NGOs)
 // @route   GET /api/donations/available
 // @access  Private (NGO & Admin)
 const getAvailableDonations = async (req, res) => {
   try {
-    const donations = await Donation.find({ status: 'Available' })
+    const donations = await Donation.find({ status: 'Pending' }) // 🔥 Synced with Model
       .populate('donorId', 'name contactNumber')
       .sort({ createdAt: -1 });
 
@@ -74,8 +74,8 @@ const updateDonationStatus = async (req, res) => {
 
     const updateFields = { status };
     
-    // If an NGO accepts it, tie their ID to the donation
-    if (status === 'Requested' || status === 'Accepted') {
+    // 🔥 Synced with Model: Using 'Accepted' instead of 'Requested'
+    if (status === 'Accepted' || status === 'Scheduled') {
       updateFields.ngoId = req.user._id; 
     }
 

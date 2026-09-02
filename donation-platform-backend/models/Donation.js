@@ -1,7 +1,13 @@
-// models/Donation.js
 const mongoose = require('mongoose');
 
 const donationSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true // Frontend se aane wala 'Mens Jackets' ab yahan save hoga
+  },
+  description: {
+    type: String
+  },
   donorId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
@@ -10,7 +16,7 @@ const donationSchema = new mongoose.Schema({
   ngoId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 
-  }, // Optional: specific NGO ke liye
+  }, 
   category: { 
     type: String, 
     required: true 
