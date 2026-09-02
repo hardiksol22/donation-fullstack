@@ -27,27 +27,32 @@ export default function LoginPage() {
     e.preventDefault()
     try {
       setLoading(true)
-      // Ensure your backend endpoint matches '/api/auth/login'
       const response = await api.post('/api/auth/login', formData)
       
+      // 🔥 FIX: Properly extracting token and user object
       const { token, user } = response.data
 
-      // Save credentials to localStorage
-      localStorage.setItem("token", token)
-      localStorage.setItem("userId", user?._id || user?.id || "")
-      localStorage.setItem("userRole", user?.role || "donor")
+      if (token) {
+        // Save credentials safely
+        localStorage.setItem("token", token)
+        localStorage.setItem("userId", user?._id || user?.id || "")
+        localStorage.setItem("userRole", user?.role || "donor")
 
-      toast.success("Logged in successfully! 🎉")
+        toast.success("Logged in successfully! 🎉")
 
-      // Role-based redirection
-      const role = (user?.role || "").toLowerCase()
-      if (role === 'admin') {
-        router.push("/admin/dashboard")
-      } else if (role === 'ngo') {
-        router.push("/ngo/requests")
+        // Role-based redirection
+        const role = (user?.role || "").toLowerCase()
+        if (role === 'admin') {
+          router.push("/admin/dashboard")
+        } else if (role === 'ngo') {
+          router.push("/ngo/requests")
+        } else {
+          router.push("/donor/donate")
+        }
       } else {
-        router.push("/donor/donate")
+        toast.error("Token missing from server response!")
       }
+
     } catch (error: any) {
       console.error("Login error:", error)
       const errorMsg = error.response?.data?.message || "Invalid email or password. Please try again."
