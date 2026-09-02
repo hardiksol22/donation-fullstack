@@ -6,15 +6,23 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS Configuration
-app.use(cors({
+// ==========================================
+// 🛡️ BULLETPROOF CORS CONFIGURATION
+// ==========================================
+const corsOptions = {
   origin: [
     'http://localhost:3000', 
     'https://donation-reuse-platform-one.vercel.app'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  // 🔥 YAHAN FIX KIYA HAI: Authorization header aur token ko explicitly allow karna zaroori hai
+  allowedHeaders: ['Content-Type', 'Authorization'] 
+};
+
+app.use(cors(corsOptions));
+// 🔥 YAHAN FIX KIYA HAI: Browser ki 'OPTIONS' (preflight) request ko handle karne ke liye
+app.options('*', cors(corsOptions)); 
 
 app.use(express.json()); 
 
