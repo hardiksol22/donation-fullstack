@@ -29,8 +29,14 @@ export default function LoginPage() {
       setLoading(true)
       const response = await api.post('/api/auth/login', formData)
       
-      // 🔥 FIX: Properly extracting token and user object
-      const { token, user } = response.data
+      // 🔥 THE ULTIMATE FIX: Smart Data Extraction 🔥
+      const resData = response.data;
+      
+      // Token kahan chupa ho sakta hai, uske saare raste check karenge
+      const token = resData.token || resData.data?.token;
+      
+      // User object kahan hai, usko bhi smartly pakdenge
+      const user = resData.user || resData.data;
 
       if (token) {
         // Save credentials safely
@@ -51,6 +57,7 @@ export default function LoginPage() {
         }
       } else {
         toast.error("Token missing from server response!")
+        console.error("Full Backend Response:", resData)
       }
 
     } catch (error: any) {
