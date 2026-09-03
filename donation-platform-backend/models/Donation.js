@@ -8,7 +8,6 @@ const donationSchema = new mongoose.Schema({
   description: {
     type: String
   },
-  // 🔥 FIX 4: Added imageUrl to save your Cloudinary links
   imageUrl: {
     type: String
   },
@@ -40,8 +39,15 @@ const donationSchema = new mongoose.Schema({
     required: true 
   },
   location: {
-    lat: { type: Number },
-    lng: { type: Number }
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: [0, 0]
+    }
   },
   scheduledTime: { 
     type: Date, 

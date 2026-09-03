@@ -6,9 +6,8 @@ const geocodeAddress = require('../utils/geocode');
 // @access  Private (Donor only)
 const createDonation = async (req, res) => {
   try {
-    const { title, category, description, quantity, condition, pickupAddress, scheduledTime } = req.body;
+    const { title, category, description, quantity, condition, pickupAddress, scheduledTime, imageUrl } = req.body;
 
-    // Convert address to coordinates before saving
     let coordinates = { type: 'Point', coordinates: [0, 0] };
     if (pickupAddress) {
       try {
@@ -27,8 +26,9 @@ const createDonation = async (req, res) => {
       pickupAddress,
       location: coordinates,
       scheduledTime,
-      status: 'Pending', // 🔥 Synced with Model
-      donorId: req.user._id // Secured via JWT middleware
+      imageUrl, 
+      status: 'Pending', 
+      donorId: req.user._id 
     });
 
     res.status(201).json({ success: true, data: donation });
@@ -37,9 +37,6 @@ const createDonation = async (req, res) => {
   }
 };
 
-// @desc    Get logged-in donor's history
-// @route   GET /api/donations/my-donations
-// @access  Private (Donor only)
 const getMyDonations = async (req, res) => {
   try {
     const donations = await Donation.find({ donorId: req.user._id }).sort({ createdAt: -1 });
@@ -49,12 +46,9 @@ const getMyDonations = async (req, res) => {
   }
 };
 
-// @desc    Get all available donations (Pending requests for NGOs)
-// @route   GET /api/donations/available
-// @access  Private (NGO & Admin)
 const getAvailableDonations = async (req, res) => {
   try {
-    const donations = await Donation.find({ status: 'Pending' }) // 🔥 Synced with Model
+    const donations = await Donation.find({ status: 'Pending' }) 
       .populate('donorId', 'name contactNumber')
       .sort({ createdAt: -1 });
 
@@ -64,9 +58,6 @@ const getAvailableDonations = async (req, res) => {
   }
 };
 
-// @desc    Update donation status (Accept or Mark Collected)
-// @route   PATCH /api/donations/:id/status
-// @access  Private (NGO & Admin)
 const updateDonationStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -74,7 +65,6 @@ const updateDonationStatus = async (req, res) => {
 
     const updateFields = { status };
     
-    // 🔥 Synced with Model: Using 'Accepted' instead of 'Requested'
     if (status === 'Accepted' || status === 'Scheduled') {
       updateFields.ngoId = req.user._id; 
     }

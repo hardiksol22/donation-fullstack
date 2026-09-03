@@ -2,9 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Donation = require('../models/Donation');
 const geocodeAddress = require('../utils/geocode'); 
-const sendEmail = require('../utils/sendEmail'); // 📩 1. Imported Email Utility
-
-// 🛡️ Import our Advanced Security Middleware
+const sendEmail = require('../utils/sendEmail'); 
 const { protect, authorize } = require('../middleware/auth'); 
 
 // ==========================================
@@ -12,10 +10,8 @@ const { protect, authorize } = require('../middleware/auth');
 // ==========================================
 router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
   try {
-    // 🛠️ FIX: Added 'imageUrl' here to receive the photo from the frontend
     const { title, category, description, quantity, condition, pickupAddress, scheduledTime, imageUrl } = req.body;
 
-    // Convert address to coordinates before saving
     let coordinates = { type: 'Point', coordinates: [0, 0] };
     if (pickupAddress) {
       try {
@@ -28,15 +24,15 @@ router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
     const donation = new Donation({
       title,
       description,
-      donorId: req.user._id, // Secure mapping from JWT
+      donorId: req.user._id, 
       category,
       quantity,
       condition,
       pickupAddress,
       location: coordinates, 
       scheduledTime,
-      imageUrl, // 🛠️ FIX: Passed the image URL to be saved in MongoDB
-      status: 'Available',
+      imageUrl, 
+      status: 'Pending', // 🔥 MATCHED WITH MODEL
     });
 
     const savedDonation = await donation.save();
@@ -47,7 +43,7 @@ router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
 });
 
 // ==========================================
-// 2. GET DONOR'S HISTORY (For Donor Impact Dashboard)
+// 2. GET DONOR'S HISTORY
 // ==========================================
 router.get('/my-donations', protect, authorize('Donor', 'donor'), async (req, res) => {
   try {
@@ -59,11 +55,11 @@ router.get('/my-donations', protect, authorize('Donor', 'donor'), async (req, re
 });
 
 // ==========================================
-// 3. GET ACTIVE REQUESTS (For NGO Command Center)
+// 3. GET ACTIVE REQUESTS (For NGO)
 // ==========================================
 router.get('/available', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), async (req, res) => {
   try {
-    const donations = await Donation.find({ status: 'Available' })
+    const donations = await Donation.find({ status: 'Pending' }) // 🔥 MATCHED WITH MODEL
       .populate('donorId', 'name email contactNumber')
       .sort({ createdAt: -1 });
 
@@ -74,7 +70,7 @@ router.get('/available', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), asy
 });
 
 // ==========================================
-// 4. GET IMPACT LEADERBOARD (Real Aggregation)
+// 4. GET IMPACT LEADERBOARD
 // ==========================================
 router.get('/leaderboard', protect, async (req, res) => {
   try {
@@ -118,21 +114,19 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
 
     const updateFields = { status };
     
-    // If an NGO is accepting the request, tie their secure user ID to this donation
-    if (status === 'Requested' || status === 'Accepted') {
+    if (status === 'Accepted' || status === 'Scheduled') {
       updateFields.ngoId = req.user._id; 
     }
 
     const updatedDonation = await Donation.findByIdAndUpdate(id, updateFields, {
       new: true,
       runValidators: true,
-    }).populate('donorId', 'name email contactNumber'); // 📩 2. Added 'email' to populate
+    }).populate('donorId', 'name email contactNumber'); 
 
     if (!updatedDonation) {
       return res.status(404).json({ success: false, message: 'Donation request not found' });
     }
 
-    // 📩 3. NEW: SEND AUTOMATED EMAIL IF ACCEPTED
     if (status === 'Accepted' && updatedDonation.donorId.email) {
       try {
         const emailHTML = `
@@ -153,7 +147,6 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
         });
       } catch (emailError) {
         console.error("Email could not be sent:", emailError);
-        // Does not crash the API if email fails
       }
     }
 

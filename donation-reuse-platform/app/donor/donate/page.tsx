@@ -28,7 +28,6 @@ export default function DonatePage() {
     scheduledTime: "",
   })
 
-  // 🔥 FIX 1: Use 'prev' state to prevent data loss (Stale Closure Fix)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
@@ -160,7 +159,6 @@ export default function DonatePage() {
                 />
               </div>
 
-              {/* 🔥 FIX 2: Added `value={formData.category}` to tightly control the Select */}
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={formData.category} onValueChange={(val) => handleSelectChange("category", val)}>
@@ -177,7 +175,6 @@ export default function DonatePage() {
                 </Select>
               </div>
 
-              {/* 🔥 FIX 3: Changed 'Heavily Used' to 'Fair' to match MongoDB strict enum */}
               <div className="space-y-2">
                 <Label>Condition</Label>
                 <Select value={formData.condition} onValueChange={(val) => handleSelectChange("condition", val)}>
