@@ -119,7 +119,7 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
     }
 
     const updatedDonation = await Donation.findByIdAndUpdate(id, updateFields, {
-      returnDocument: 'after', // 🔥 FIX: Cleaned up the Mongoose warning!
+      returnDocument: 'after', 
       runValidators: true,
     }).populate('donorId', 'name email contactNumber'); 
 
@@ -128,26 +128,26 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
     }
 
     if (status === 'Accepted' && updatedDonation.donorId.email) {
-      try {
-        const emailHTML = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eaeaea; border-radius: 10px;">
-            <h2 style="color: #10b981;">Good News, ${updatedDonation.donorId.name}! 🎉</h2>
-            <p>Your donation request for <strong>"${updatedDonation.title}"</strong> has been officially accepted by a verified NGO.</p>
-            <p>Their representative will contact you shortly at <strong>${updatedDonation.donorId.contactNumber}</strong> to coordinate the exact pickup time.</p>
-            <br>
-            <p>Thank you for making a difference in the community!</p>
-            <p><strong>- The Platform Team</strong></p>
-          </div>
-        `;
-        
-        await sendEmail({
-          email: updatedDonation.donorId.email,
-          subject: 'Donation Accepted for Pickup! 🚚',
-          html: emailHTML
-        });
-      } catch (emailError) {
-        console.error("Email could not be sent:", emailError);
-      }
+      const emailHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eaeaea; border-radius: 10px;">
+          <h2 style="color: #10b981;">Good News, ${updatedDonation.donorId.name}! 🎉</h2>
+          <p>Your donation request for <strong>"${updatedDonation.title}"</strong> has been officially accepted by a verified NGO.</p>
+          <p>Their representative will contact you shortly at <strong>${updatedDonation.donorId.contactNumber}</strong> to coordinate the exact pickup time.</p>
+          <br>
+          <p>Thank you for making a difference in the community!</p>
+          <p><strong>- The Platform Team</strong></p>
+        </div>
+      `;
+      
+      // 🔥 FIX: Removed 'await' and added '.catch()'. 
+      // Ab email background mein jayega aur frontend turant success dikhayega!
+      sendEmail({
+        email: updatedDonation.donorId.email,
+        subject: 'Donation Accepted for Pickup! 🚚',
+        html: emailHTML
+      }).catch(emailError => {
+        console.error("Background Email Error:", emailError);
+      });
     }
 
     return res.status(200).json({ success: true, data: updatedDonation });
