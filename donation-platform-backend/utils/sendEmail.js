@@ -1,25 +1,22 @@
 const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
-  // 1. Create a transporter (Using Gmail as an example)
   const transporter = nodemailer.createTransport({
-    service: 'Gmail',
+    service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USERNAME, // Your platform's official email
-      pass: process.env.EMAIL_PASSWORD, // App Password generated from Google Account
+      user: process.env.EMAIL_USER, // Matching your .env
+      pass: process.env.EMAIL_PASS, // Matching your .env
     },
   });
 
-  // 2. Define the email options
-  const mailOptions = {
-    from: 'Donation Platform Team <noreply@daansetu.com>',
+  const message = {
+    from: `DaanSetu Team <${process.env.EMAIL_USER}>`, // Sends from your email
     to: options.email,
     subject: options.subject,
-    html: options.html, // Using HTML for beautiful formatted emails
+    html: options.html,
   };
 
-  // 3. Actually send the email
-  await transporter.sendMail(mailOptions);
+  await transporter.sendMail(message);
 };
 
 module.exports = sendEmail;
