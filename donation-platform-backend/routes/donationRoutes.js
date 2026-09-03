@@ -32,7 +32,7 @@ router.post('/', protect, authorize('Donor', 'donor'), async (req, res) => {
       location: coordinates, 
       scheduledTime,
       imageUrl, 
-      status: 'Pending', // 🔥 MATCHED WITH MODEL
+      status: 'Pending', 
     });
 
     const savedDonation = await donation.save();
@@ -59,7 +59,7 @@ router.get('/my-donations', protect, authorize('Donor', 'donor'), async (req, re
 // ==========================================
 router.get('/available', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), async (req, res) => {
   try {
-    const donations = await Donation.find({ status: 'Pending' }) // 🔥 MATCHED WITH MODEL
+    const donations = await Donation.find({ status: 'Pending' }) 
       .populate('donorId', 'name email contactNumber')
       .sort({ createdAt: -1 });
 
@@ -119,7 +119,7 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
     }
 
     const updatedDonation = await Donation.findByIdAndUpdate(id, updateFields, {
-      new: true,
+      returnDocument: 'after', // 🔥 FIX: Cleaned up the Mongoose warning!
       runValidators: true,
     }).populate('donorId', 'name email contactNumber'); 
 
