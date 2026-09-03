@@ -148,7 +148,14 @@ export default function NgoRequestsPage() {
                   </div>
                   <div className="flex items-start gap-2">
                     <Clock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{new Date(donation.scheduledTime).toLocaleString()}</span>
+                    {/* 🔥 FIX: Indian Timezone formatting applied here */}
+                    <span>
+                      {new Date(donation.scheduledTime).toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                      })}
+                    </span>
                   </div>
                 </div>
               </CardContent>
