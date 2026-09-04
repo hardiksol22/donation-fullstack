@@ -40,10 +40,16 @@ export default function LoginPage() {
         localStorage.setItem("userId", user?._id || user?.id || "")
         localStorage.setItem("userRole", user?.role || "donor")
 
-        toast.success("Logged in successfully! 🎉")
+        // 🔥 FIX: Admin seedha Dashboard par jayega, baaki sab Homepage par
+        const role = (user?.role || "").toLowerCase()
 
-        // 🔥 FIX: Role-based redirection hata diya. Ab sab seedha Homepage par jayenge!
-        router.push("/")
+        if (role === 'admin') {
+          toast.success("Welcome back, Boss! 👑")
+          router.push("/admin/dashboard") // Admin redirect
+        } else {
+          toast.success("Logged in successfully! 🎉")
+          router.push("/") // Donor & NGO redirect
+        }
         
       } else {
         toast.error("Token missing from server response!")

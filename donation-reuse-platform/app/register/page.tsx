@@ -23,6 +23,7 @@ export default function RegisterPage() {
     role: "Donor", // Default role
     organizationName: "",
     contactNumber: "",
+    adminUniqueId: "", // 🔥 Naya admin field state
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,9 +116,25 @@ export default function RegisterPage() {
               </Select>
             </div>
 
+            {/* 🔥 YEH RAHA ADMIN UNIQUE ID FIELD 🔥 */}
+            <div className="space-y-2 mt-2">
+              <Label htmlFor="adminUniqueId" className="text-muted-foreground flex items-center gap-2">
+                Admin Unique ID <span className="text-xs text-primary">(Optional)</span>
+              </Label>
+              <Input 
+                id="adminUniqueId" 
+                name="adminUniqueId" 
+                type="password" 
+                placeholder="Leave blank if not admin" 
+                value={formData.adminUniqueId} 
+                onChange={handleChange} 
+                className="border-primary/20"
+              />
+            </div>
+
             {formData.role === 'NGO' && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-2 mt-2">
                   <Label htmlFor="organizationName">Organization Name</Label>
                   <Input 
                     id="organizationName" 
