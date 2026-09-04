@@ -4,13 +4,17 @@ const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 const Donation = require('../models/Donation');
 
+// ==========================================
 // @desc    Get complete platform statistics
 // @route   GET /api/admin/stats
 // @access  Private (Admin Only)
+// ==========================================
 router.get('/stats', protect, authorize('Admin', 'admin'), async (req, res) => {
   try {
     const totalDonors = await User.countDocuments({ role: { $regex: /^donor$/i } });
     const totalNGOs = await User.countDocuments({ role: { $regex: /^ngo$/i } });
+    
+    // Fetch NGOs that are not yet verified
     const pendingNGOs = await User.find({ role: { $regex: /^ngo$/i }, isVerified: false }).select('-password');
     
     const totalDonations = await Donation.countDocuments();
@@ -29,9 +33,11 @@ router.get('/stats', protect, authorize('Admin', 'admin'), async (req, res) => {
   }
 });
 
+// ==========================================
 // @desc    Verify an NGO
 // @route   PATCH /api/admin/verify-ngo/:id
 // @access  Private (Admin Only)
+// ==========================================
 router.patch('/verify-ngo/:id', protect, authorize('Admin', 'admin'), async (req, res) => {
   try {
     const ngo = await User.findByIdAndUpdate(
