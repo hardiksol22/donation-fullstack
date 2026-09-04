@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import ProtectedRoute from "@/components/ProtectedRoute"
+import ProtectedRoute from "@/components/ProtectedRoute" // Ensure this component exists in your project
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -33,7 +33,8 @@ export default function ProfilePage() {
   // 🔥 1. FETCH REAL DATA FROM BACKEND
   const fetchRealProfile = async () => {
     try {
-      const response = await api.get('/api/auth/profile')
+      // Endpoint matched with the backend route we created (/api/users/profile)
+      const response = await api.get('/api/users/profile')
       const user = response.data.data
       
       setUserData({
@@ -57,7 +58,8 @@ export default function ProfilePage() {
     setSaving(true)
     
     try {
-      await api.put('/api/auth/profile', {
+      // Endpoint matched with the backend route we created (/api/users/profile)
+      await api.put('/api/users/profile', {
         name: userData.name,
         contactNumber: userData.contactNumber,
         address: userData.address
@@ -73,7 +75,8 @@ export default function ProfilePage() {
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("userRole")
-    toast.success("Logged out successfully")
+    localStorage.removeItem("userId")
+    toast.success("Logged out successfully 👋")
     router.push("/login")
   }
 
@@ -95,10 +98,10 @@ export default function ProfilePage() {
               <User className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">{userData.name}</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight capitalize">{userData.name}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <p className="text-muted-foreground">{userData.email}</p>
-                <Badge variant={userData.role.toLowerCase() === 'admin' ? 'destructive' : 'secondary'}>
+                <Badge variant={userData.role.toLowerCase() === 'admin' ? 'destructive' : 'secondary'} className="capitalize">
                   {userData.role}
                 </Badge>
               </div>
@@ -128,7 +131,7 @@ export default function ProfilePage() {
                       <Label htmlFor="name">Full Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="name" value={userData.name} onChange={(e) => setUserData({...userData, name: e.target.value})} className="pl-9" />
+                        <Input id="name" value={userData.name} onChange={(e) => setUserData({...userData, name: e.target.value})} className="pl-9" required />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -140,7 +143,7 @@ export default function ProfilePage() {
                       <Label htmlFor="phone">Contact Number</Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="phone" value={userData.contactNumber} onChange={(e) => setUserData({...userData, contactNumber: e.target.value})} className="pl-9" />
+                        <Input id="phone" value={userData.contactNumber} onChange={(e) => setUserData({...userData, contactNumber: e.target.value})} className="pl-9" placeholder="e.g. +91 9876543210" />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -153,8 +156,12 @@ export default function ProfilePage() {
                   </div>
                 </CardContent>
                 <CardFooter className="bg-muted/10 p-6 border-t mt-2">
-                  <Button type="submit" className="gap-2" disabled={saving}>
-                    {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving Database...</> : <><Save className="w-4 h-4" /> Save Profile</>}
+                  <Button type="submit" className="gap-2 font-semibold" disabled={saving}>
+                    {saving ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Saving Database...</>
+                    ) : (
+                      <><Save className="w-4 h-4" /> Save Profile</>
+                    )}
                   </Button>
                 </CardFooter>
               </form>
@@ -162,7 +169,6 @@ export default function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="security">
-            {/* Security tab UI remains the same */}
             <Card className="border-primary/10 shadow-sm">
               <CardHeader>
                 <CardTitle>Account Security</CardTitle>
@@ -171,18 +177,18 @@ export default function ProfilePage() {
               <CardContent className="space-y-6">
                 <div className="space-y-2 max-w-md">
                   <Label htmlFor="current-password">Current Password</Label>
-                  <Input id="current-password" type="password" />
+                  <Input id="current-password" type="password" placeholder="••••••••" />
                 </div>
                 <div className="space-y-2 max-w-md">
                   <Label htmlFor="new-password">New Password</Label>
                   <div className="relative">
                     <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="new-password" type="password" className="pl-9" />
+                    <Input id="new-password" type="password" className="pl-9" placeholder="••••••••" />
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="bg-muted/10 p-6 border-t mt-2">
-                <Button variant="outline" className="gap-2 border-primary text-primary hover:bg-primary/10">
+                <Button variant="outline" className="gap-2 border-primary text-primary hover:bg-primary/10 font-semibold" onClick={() => toast.info("Password update feature coming soon!")}>
                   Update Password
                 </Button>
               </CardFooter>
