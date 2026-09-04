@@ -135,4 +135,20 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
   }
 });
 
+// ==========================================
+// 6. GET NGO'S ACCEPTED TASKS (My Tasks)
+// ==========================================
+router.get('/my-tasks', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), async (req, res) => {
+  try {
+    // 🔥 Sirf wahi donations laao jo is NGO ne 'Accept' ki hain
+    const tasks = await Donation.find({ status: 'Accepted', ngoId: req.user._id })
+      .populate('donorId', 'name email contactNumber')
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json({ success: true, count: tasks.length, data: tasks });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
