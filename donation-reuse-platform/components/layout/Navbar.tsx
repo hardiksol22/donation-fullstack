@@ -67,7 +67,6 @@ export default function Navbar() {
     if (!isLoggedIn) {
       return (
         <div className={isMobile ? "flex flex-col gap-3 mt-4" : "flex items-center gap-4"}>
-          {/* 🔥 FIX: Only Login button remains, Sign Up removed! */}
           <Link href="/login" onClick={() => setIsSheetOpen(false)}>
             <Button variant={isMobile ? "default" : "ghost"} className={isMobile ? "w-full font-medium" : "font-medium"}>
               Login
@@ -86,6 +85,10 @@ export default function Navbar() {
             </Link>
             <Link href="/donor/history" onClick={() => setIsSheetOpen(false)} className={getLinkClass('/donor/history')}>
               <History className="h-4 w-4" /> My Impact
+            </Link>
+            {/* 🔥 YEH RAHA NAYA LINK 🔥 */}
+            <Link href="/donor/ngos" onClick={() => setIsSheetOpen(false)} className={getLinkClass('/donor/ngos')}>
+              <ShieldCheck className="h-4 w-4" /> Verified NGOs
             </Link>
           </>
         )}
