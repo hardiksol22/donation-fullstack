@@ -27,7 +27,7 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = useState(false) // Controls mobile menu state
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
@@ -56,7 +56,6 @@ export default function Navbar() {
 
   if (!isMounted) return <div className="h-16 border-b bg-background" />
 
-  // Helper to check active route
   const isActive = (path: string) => pathname === path
 
   const renderNavLinks = (isMobile = false) => {
@@ -68,11 +67,11 @@ export default function Navbar() {
     if (!isLoggedIn) {
       return (
         <div className={isMobile ? "flex flex-col gap-3 mt-4" : "flex items-center gap-4"}>
-          <Link href="/login" onClick={() => setIsSheetOpen(false)} className={getLinkClass('/login')}>
-            Login
-          </Link>
-          <Link href="/register" onClick={() => setIsSheetOpen(false)}>
-            <Button className={isMobile ? "w-full" : ""}>Sign Up</Button>
+          {/* 🔥 FIX: Only Login button remains, Sign Up removed! */}
+          <Link href="/login" onClick={() => setIsSheetOpen(false)}>
+            <Button variant={isMobile ? "default" : "ghost"} className={isMobile ? "w-full font-medium" : "font-medium"}>
+              Login
+            </Button>
           </Link>
         </div>
       )
@@ -80,7 +79,6 @@ export default function Navbar() {
 
     return (
       <div className={isMobile ? "flex flex-col gap-2 mt-2" : "flex items-center gap-6"}>
-        {/* Donor Links */}
         {userRole === 'donor' && (
           <>
             <Link href="/donor/donate" onClick={() => setIsSheetOpen(false)} className={getLinkClass('/donor/donate')}>
@@ -92,21 +90,18 @@ export default function Navbar() {
           </>
         )}
 
-        {/* NGO Links */}
         {userRole === 'ngo' && (
           <Link href="/ngo/requests" onClick={() => setIsSheetOpen(false)} className={getLinkClass('/ngo/requests')}>
             <LayoutDashboard className="h-4 w-4" /> Command Center
           </Link>
         )}
 
-        {/* Admin Links */}
         {userRole === 'admin' && (
           <Link href="/admin/dashboard" onClick={() => setIsSheetOpen(false)} className={getLinkClass('/admin/dashboard')}>
             <ShieldCheck className="h-4 w-4" /> Admin Portal
           </Link>
         )}
 
-        {/* Mobile-only Logout (Desktop uses Dropdown) */}
         {isMobile && (
           <Button 
             variant="outline" 
@@ -124,7 +119,6 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container mx-auto px-4 lg:px-8 flex h-16 items-center justify-between">
         
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           <div className="bg-primary p-1.5 rounded-xl shadow-sm">
             <HeartHandshake className="h-5 w-5 text-primary-foreground" />
@@ -134,7 +128,6 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Navigation & Actions */}
         <div className="hidden md:flex items-center gap-8">
           <nav>
             {renderNavLinks()}
@@ -143,7 +136,6 @@ export default function Navbar() {
           <div className="flex items-center gap-4 pl-6 border-l">
             <ModeToggle />
             
-            {/* Desktop Profile Dropdown */}
             {isLoggedIn && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -166,7 +158,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         <div className="flex md:hidden items-center gap-3">
           <ModeToggle />
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
