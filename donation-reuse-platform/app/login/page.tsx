@@ -29,13 +29,9 @@ export default function LoginPage() {
       setLoading(true)
       const response = await api.post('/api/auth/login', formData)
       
-      // 🔥 THE ULTIMATE FIX: Smart Data Extraction 🔥
       const resData = response.data;
       
-      // Token kahan chupa ho sakta hai, uske saare raste check karenge
       const token = resData.token || resData.data?.token;
-      
-      // User object kahan hai, usko bhi smartly pakdenge
       const user = resData.user || resData.data;
 
       if (token) {
@@ -46,15 +42,9 @@ export default function LoginPage() {
 
         toast.success("Logged in successfully! 🎉")
 
-        // Role-based redirection
-        const role = (user?.role || "").toLowerCase()
-        if (role === 'admin') {
-          router.push("/admin/dashboard")
-        } else if (role === 'ngo') {
-          router.push("/ngo/requests")
-        } else {
-          router.push("/donor/donate")
-        }
+        // 🔥 FIX: Role-based redirection hata diya. Ab sab seedha Homepage par jayenge!
+        router.push("/")
+        
       } else {
         toast.error("Token missing from server response!")
         console.error("Full Backend Response:", resData)
