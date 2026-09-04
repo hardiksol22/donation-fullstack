@@ -11,7 +11,7 @@ const generateToken = (id) => {
 // 1. REGISTER FUNCTION
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, organizationName, contactNumber } = req.body;
+    const { name, email, password, role, organizationName, contactNumber, adminUniqueId } = req.body;
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -19,15 +19,42 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Email already registered! Please login.' });
     }
 
+    let finalRole = role || 'Donor';
+    let isVerified = true;
+
+    // Handle Admin Unique ID verification
+    if (adminUniqueId) {
+      if (adminUniqueId === 'DAANSETU_ADMIN_777') {
+        finalRole = 'Admin';
+        isVerified = true;
+      } else {
+        return res.status(400).json({ message: 'Invalid Admin Unique ID' });
+      }
+    } else if (finalRole.toLowerCase() === 'ngo') {
+      isVerified = false;
+    }
+
     // Create new user
     const user = await User.create({
-      name, email, password, role, organizationName, contactNumber
+      name, 
+      email, 
+      password, 
+      role: finalRole, 
+      organizationName, 
+      contactNumber,
+      isVerified
     });
 
     if (user) {
       res.status(201).json({
         message: 'Account created successfully',
-        token: generateToken(user._id)
+        token: generateToken(user._id),
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
       });
     }
   } catch (error) {
@@ -55,7 +82,7 @@ const loginUser = async (req, res) => {
         }
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password.' });
+      res.status(400).json({ message: 'Invalid email or password.' });
     }
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

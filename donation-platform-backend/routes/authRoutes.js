@@ -12,11 +12,11 @@ const generateToken = (id) => {
 };
 
 // ==========================================
-// 1. REGISTER NEW USER
+// 1. REGISTER NEW USER (With Admin Unique ID Support)
 // ==========================================
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, organizationName, contactNumber, adminUniqueId } = req.body;
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -24,8 +24,31 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
+    let finalRole = role || 'Donor';
+    let isVerified = true;
+
+    // 🔥 Admin Unique ID validation
+    if (adminUniqueId) {
+      if (adminUniqueId === 'DAANSETU_ADMIN_777') {
+        finalRole = 'Admin';
+        isVerified = true;
+      } else {
+        return res.status(400).json({ success: false, message: 'Invalid Admin Unique ID' });
+      }
+    } else if (finalRole.toLowerCase() === 'ngo') {
+      isVerified = false; // NGOs require admin verification by default
+    }
+
     // Create new user in DB
-    const user = await User.create({ name, email, password, role });
+    const user = await User.create({ 
+      name, 
+      email, 
+      password, 
+      role: finalRole, 
+      organizationName, 
+      contactNumber, 
+      isVerified 
+    });
 
     res.status(201).json({
       success: true,
