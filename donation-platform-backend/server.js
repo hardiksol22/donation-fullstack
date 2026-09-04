@@ -34,6 +34,7 @@ const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes); // Added Donation Engine
 app.use('/api/admin', adminRoutes);       // Added Admin Dashboard
+app.use('/api/users', require('./routes/userRoutes'));
 
 // ==========================================
 // HEALTH & ERROR HANDLING
