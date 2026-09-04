@@ -55,7 +55,8 @@ const donationSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['Pending', 'Accepted', 'Rejected', 'Scheduled', 'Collected'], 
+    // 🔥 FIX: Added 'Completed' to the list of allowed statuses!
+    enum: ['Pending', 'Accepted', 'Rejected', 'Scheduled', 'Collected', 'Completed'], 
     default: 'Pending' 
   }
 }, { timestamps: true });
