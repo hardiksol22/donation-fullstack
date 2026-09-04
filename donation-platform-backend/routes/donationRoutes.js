@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Donation = require('../models/Donation');
 const geocodeAddress = require('../utils/geocode'); 
-const sendEmail = require('../utils/sendEmail'); 
 const { protect, authorize } = require('../middleware/auth'); 
+// 🔥 sendEmail import completely removed
 
 // ==========================================
 // 1. CREATE DONATION (Strictly For Donors)
@@ -127,28 +127,7 @@ router.patch('/:id/status', protect, authorize('NGO', 'ngo', 'Admin', 'admin'), 
       return res.status(404).json({ success: false, message: 'Donation request not found' });
     }
 
-    if (status === 'Accepted' && updatedDonation.donorId.email) {
-      const emailHTML = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eaeaea; border-radius: 10px;">
-          <h2 style="color: #10b981;">Good News, ${updatedDonation.donorId.name}! 🎉</h2>
-          <p>Your donation request for <strong>"${updatedDonation.title}"</strong> has been officially accepted by a verified NGO.</p>
-          <p>Their representative will contact you shortly at <strong>${updatedDonation.donorId.contactNumber}</strong> to coordinate the exact pickup time.</p>
-          <br>
-          <p>Thank you for making a difference in the community!</p>
-          <p><strong>- The Platform Team</strong></p>
-        </div>
-      `;
-      
-      // 🔥 FIX: Removed 'await' and added '.catch()'. 
-      // Ab email background mein jayega aur frontend turant success dikhayega!
-      sendEmail({
-        email: updatedDonation.donorId.email,
-        subject: 'Donation Accepted for Pickup! 🚚',
-        html: emailHTML
-      }).catch(emailError => {
-        console.error("Background Email Error:", emailError);
-      });
-    }
+    // 🔥 Email logic completely removed! Backend will just return success.
 
     return res.status(200).json({ success: true, data: updatedDonation });
   } catch (error) {
