@@ -1,147 +1,165 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import ProtectedRoute from "@/components/ProtectedRoute"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { LifeBuoy, Send, Mail, Phone, MapPin, Loader2, MessageSquare } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { LifeBuoy, Loader2, Send, MessageSquareWarning, CheckCircle2 } from "lucide-react"
+import api from "@/lib/api"
 import { toast } from "sonner"
 
-export default function SupportPage() {
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" })
+interface Dispute {
+  _id: string;
+  subject: string;
+  description: string;
+  status: string;
+  adminResponse?: string;
+  createdAt: string;
+}
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+export default function SupportPage() {
+  const [disputes, setDisputes] = useState<Dispute[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [formData, setFormData] = useState({ subject: "", description: "" })
+
+  useEffect(() => {
+    fetchDisputes()
+  }, [])
+
+  const fetchDisputes = async () => {
+    try {
+      const response = await api.get('/api/disputes')
+      setDisputes(response.data.data)
+    } catch (error) {
+      toast.error("Failed to load your support tickets.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    
-    // Simulate sending a support ticket
-    setTimeout(() => {
-      toast.success("Your message has been sent! Our support team will contact you soon. 📩")
-      setFormData({ name: "", email: "", subject: "", message: "" })
-      setLoading(false)
-    }, 1500)
+    try {
+      setSubmitting(true)
+      const response = await api.post('/api/disputes', formData)
+      setDisputes([response.data.data, ...disputes])
+      setFormData({ subject: "", description: "" })
+      toast.success("Ticket submitted successfully! Support team will respond soon.")
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to submit ticket.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-6xl">
-      <div className="text-center mb-16">
-        <div className="flex justify-center mb-4">
-          <div className="bg-primary/10 p-4 rounded-full">
-            <LifeBuoy className="h-10 w-10 text-primary" />
-          </div>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Help & Support</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          We're here to help! Browse our FAQs or reach out directly to the platform administrators.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* LEFT COLUMN: FAQ SECTION */}
-        <div className="space-y-6">
+    <ProtectedRoute>
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-8 flex items-center gap-3">
+          <LifeBuoy className="h-8 w-8 text-primary" />
           <div>
-            <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-primary" /> Frequently Asked Questions
-            </h2>
-            <p className="text-muted-foreground mb-6">Quick answers to common questions about the donation process.</p>
-          </div>
-
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1" className="border-primary/10">
-              <AccordionTrigger className="text-left font-semibold">How do I schedule a pickup?</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed">
-                Once you create a Donor account, navigate to the "Donate" dashboard. Fill in the item details and select your preferred pickup time. A verified local NGO will be notified and will accept your request.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2" className="border-primary/10">
-              <AccordionTrigger className="text-left font-semibold">What items can I donate?</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed">
-                You can donate gently used clothes, electronics, books, furniture, and household appliances. Please ensure all items are in working or usable condition before listing them.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3" className="border-primary/10">
-              <AccordionTrigger className="text-left font-semibold">Are the NGOs verified?</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed">
-                Yes, absolutely! Every NGO partner must go through a strict verification process and be manually approved by our Super Admin team before they can accept donations on the platform.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4" className="border-primary/10">
-              <AccordionTrigger className="text-left font-semibold">Is my personal data safe?</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed">
-                Your data is fully encrypted. We only share your pickup address and contact number with the specific NGO that accepts your donation request to facilitate the logistics.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 pt-8 border-t border-primary/10">
-            <Card className="border-primary/10 shadow-sm bg-muted/20">
-              <CardContent className="p-4 flex items-center gap-4">
-                <Mail className="w-8 h-8 text-primary" />
-                <div>
-                  <p className="font-semibold text-sm">Email Us</p>
-                  <p className="text-muted-foreground text-sm">support@daansetu.com</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-primary/10 shadow-sm bg-muted/20">
-              <CardContent className="p-4 flex items-center gap-4">
-                <Phone className="w-8 h-8 text-primary" />
-                <div>
-                  <p className="font-semibold text-sm">Call Us</p>
-                  <p className="text-muted-foreground text-sm">+91 1800-123-4567</p>
-                </div>
-              </CardContent>
-            </Card>
+            <h1 className="text-3xl font-extrabold tracking-tight">Help & Support</h1>
+            <p className="text-muted-foreground">Report issues with donations, pickups, or platform bugs.</p>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: CONTACT FORM */}
-        <div>
-          <Card className="border-primary/10 shadow-lg h-full">
-            <CardHeader className="bg-primary/5 border-b border-primary/10">
-              <CardTitle>Send a Message</CardTitle>
-              <CardDescription>Fill out the form below and we'll get back to you within 24 hours.</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4 pt-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" value={formData.name} onChange={handleChange} required placeholder="John Doe" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required placeholder="name@example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input id="subject" name="subject" value={formData.subject} onChange={handleChange} required placeholder="How can we help?" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea id="message" name="message" value={formData.message} onChange={handleChange} required placeholder="Describe your issue or question in detail..." className="min-h-[120px] resize-none" />
-                </div>
-              </CardContent>
-              <CardFooter className="bg-muted/10 p-6 border-t mt-2">
-                <Button type="submit" className="w-full h-12 text-lg gap-2" disabled={loading}>
-                  {loading ? (
-                    <><Loader2 className="w-5 h-5 animate-spin" /> Sending...</>
-                  ) : (
-                    <><Send className="w-5 h-5" /> Send Message</>
-                  )}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* CREATE TICKET FORM */}
+          <div className="md:col-span-1">
+            <Card className="border-primary/10 shadow-sm sticky top-24">
+              <CardHeader>
+                <CardTitle className="text-lg">Submit a Ticket</CardTitle>
+                <CardDescription>Tell us what went wrong.</CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject</Label>
+                    <Input 
+                      id="subject" 
+                      placeholder="e.g. NGO didn't arrive" 
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Details</Label>
+                    <Textarea 
+                      id="description" 
+                      placeholder="Please explain the issue..." 
+                      className="min-h-[120px]"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full gap-2" disabled={submitting}>
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Submit Report
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </div>
+
+          {/* PAST TICKETS */}
+          <div className="md:col-span-2 space-y-4">
+            <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+              <MessageSquareWarning className="h-5 w-5 text-muted-foreground" />
+              Your Recent Tickets
+            </h3>
+            
+            {disputes.length === 0 ? (
+              <Card className="border-dashed bg-muted/20">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-500/50 mb-3" />
+                  <p>You haven't reported any issues yet.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              disputes.map((ticket) => (
+                <Card key={ticket._id} className={ticket.status === 'Resolved' ? 'border-l-4 border-l-emerald-500 opacity-90' : 'border-l-4 border-l-amber-500'}>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+                      <Badge variant={ticket.status === 'Resolved' ? 'default' : 'secondary'} className={ticket.status === 'Resolved' ? 'bg-emerald-500' : 'bg-amber-500 text-white hover:bg-amber-600'}>
+                        {ticket.status}
+                      </Badge>
+                    </div>
+                    <CardDescription>{new Date(ticket.createdAt).toLocaleDateString()}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <p className="text-foreground/80 mb-4">{ticket.description}</p>
+                    
+                    {ticket.status === 'Resolved' && ticket.adminResponse && (
+                      <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-md border border-emerald-100 dark:border-emerald-900/50">
+                        <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-1">Admin Response:</p>
+                        <p className="text-muted-foreground">{ticket.adminResponse}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }
