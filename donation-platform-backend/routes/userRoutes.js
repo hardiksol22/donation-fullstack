@@ -8,7 +8,12 @@ const { protect } = require('../middleware/auth');
 // ==========================================
 router.get('/ngos', protect, async (req, res) => {
   try {
-    const ngos = await User.find({ role: { $in: ['NGO', 'ngo'] } }).select('-password');
+    // 🔥 Yahan { isVerified: true } add kar diya hai taaki sirf verified NGOs hi aayein
+    const ngos = await User.find({ 
+      role: { $in: ['NGO', 'ngo'] }, 
+      isVerified: true 
+    }).select('-password');
+    
     return res.status(200).json({ success: true, count: ngos.length, data: ngos });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
